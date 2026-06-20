@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verifier Pro | Ultimate List Cleaning</title>
+    <meta name="description" content="Clean your email lists instantly with our 99.9% accurate verifier.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-mesh"></div>
+    <div class="app-container">
+        <header class="glass-header">
+            <div class="logo">Verify<span class="highlight">Pro</span></div>
+            <div class="credits">
+                <span class="credits-label">Daily Credits</span>
+                <span class="credits-value" id="daily-credits">9999999</span>
+            </div>
+        </header>
+
+        <main class="glass-panel main-panel">
+            <h1>Clean Your List. <br><span class="highlight">Boost Deliverability.</span></h1>
+            <p class="subtitle">Upload your CSV and let our Concurrency Engine do the heavy lifting.</p>
+
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-icon">📁</div>
+                <p>Drag & Drop your CSV here or <strong>Browse</strong></p>
+                <input type="file" id="file-input" accept=".csv" hidden>
+            </div>
+
+            <div class="single-check-zone">
+                <input type="email" id="single-email-input" placeholder="Enter a single email..." class="glass-input" />
+                <button id="single-email-btn" class="glass-btn">Check</button>
+                <div id="single-email-result" style="width: 100%; margin-top: 10px; font-weight: bold; min-height: 24px;"></div>
+            </div>
+
+            <div class="progress-container" id="progress-container" style="display: none;">
+                <div class="progress-info">
+                    <span id="progress-status">Verifying...</span>
+                    <span id="progress-percentage">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="stats-grid" style="display: none;">
+                <div class="stat-card">
+                    <h3>Valid</h3>
+                    <div class="stat-value text-success" id="stat-valid">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Invalid</h3>
+                    <div class="stat-value text-danger" id="stat-invalid">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Catch-all</h3>
+                    <div class="stat-value text-warning" id="stat-catchall">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Risky</h3>
+                    <div class="stat-value text-risky" id="stat-risky">0</div>
+                </div>
+            </div>
+
+            <div id="live-feed-section" style="display: none; margin-top: 2rem; display: flex; gap: 1.5rem; justify-content: space-between; text-align: left;">
+                <div class="feed-column" style="flex: 1; background: rgba(16, 185, 129, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                    <h3 class="text-success" style="margin-bottom: 0.5rem; font-size: 1rem;">Live Valid</h3>
+                    <div id="live-valid-list" style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem;"></div>
+                </div>
+                <div class="feed-column" style="flex: 1; background: rgba(239, 68, 68, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                    <h3 class="text-danger" style="margin-bottom: 0.5rem; font-size: 1rem;">Live Invalid</h3>
+                    <div id="live-invalid-list" style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem;"></div>
+                </div>
+            </div>
+
+            <div id="download-section" style="display: none; margin-top: 2rem; text-align: center; gap: 1rem; justify-content: center; align-items: center;">
+                <a id="download-btn" class="glass-btn download-btn" href="#" download>⬇ Download Cleaned CSV</a>
+                <button id="reset-btn" class="glass-btn" style="background: rgba(255,255,255,0.1); margin-left: 1rem;">Verify Another List</button>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
