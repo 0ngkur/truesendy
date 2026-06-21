@@ -4,6 +4,9 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const path = require('path');
 const verifier = require('./verifier');
+const xlsx = require('xlsx');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -18,56 +21,68 @@ let activeJobs = {};
 
 // ======================== BULK CSV UPLOAD ========================
 
-app.post('/api/upload', upload.single('list'), (req, res) => {
+app.post('/api/upload', upload.single('list'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const emails = [];
-    fs.createReadStream(req.file.path)
-        .pipe(csv())
-        .on('data', (data) => {
-            let emailAddress = null;
-            if (data.email) {
-                emailAddress = data.email;
-            } else {
-                const vals = Object.values(data);
-                emailAddress = vals.find(v => typeof v === 'string' && v.includes('@')) || vals[0];
-            }
-            if (emailAddress && typeof emailAddress === 'string') {
-                emails.push(emailAddress.trim());
-            }
-        })
-        .on('end', () => {
-            // GDPR: delete uploaded file immediately
-            try { fs.unlinkSync(req.file.path); } catch (_) {}
+    const emails = new Set();
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    
+    try {
+        let rawText = '';
+        if (ext === '.xlsx' || ext === '.xls') {
+            const workbook = xlsx.readFile(req.file.path);
+            workbook.SheetNames.forEach(sheetName => {
+                const sheet = workbook.Sheets[sheetName];
+                rawText += xlsx.utils.sheet_to_csv(sheet) + ' ';
+            });
+        } else if (ext === '.pdf') {
+            const dataBuffer = fs.readFileSync(req.file.path);
+            const data = await pdfParse(dataBuffer);
+            rawText = data.text;
+        } else if (ext === '.docx') {
+            const result = await mammoth.extractRawText({path: req.file.path});
+            rawText = result.value;
+        } else {
+            // For csv, txt, or anything else, just read as string
+            rawText = fs.readFileSync(req.file.path, 'utf8');
+        }
 
-            const validEmails = emails.filter(e => e && e.includes('@'));
+        const found = rawText.match(emailRegex);
+        if (found) {
+            found.forEach(e => emails.add(e.toLowerCase().trim()));
+        }
+    } catch (e) {
+        console.error("Extraction error:", e);
+        try { fs.unlinkSync(req.file.path); } catch (_) {}
+        return res.status(500).json({ error: 'Failed to parse the file.' });
+    }
 
-            if (userCredits < validEmails.length) {
-                return res.status(402).json({ error: `Insufficient credits! You have ${userCredits} but need ${validEmails.length}.` });
-            }
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
 
-            const jobId = Date.now().toString();
-            activeJobs[jobId] = {
-                emails: validEmails,
-                processed: 0,
-                valid: 0,
-                invalid: 0,
-                catchall: 0,
-                risky: 0,
-                results: [],    // Store every result for download
-                recentValid: [], // For real-time UI
-                recentInvalid: [], // For real-time UI
-                status: 'running',
-            };
-            res.json({ jobId, total: validEmails.length });
+    const validEmails = Array.from(emails);
 
-            // Fire and forget — processJob handles its own errors
-            processJob(jobId);
-        })
-        .on('error', (err) => {
-            try { fs.unlinkSync(req.file.path); } catch (_) {}
-            res.status(500).json({ error: 'Failed to parse CSV file.' });
-        });
+    if (userCredits < validEmails.length) {
+        return res.status(402).json({ error: `Insufficient credits! You have ${userCredits} but need ${validEmails.length}.` });
+    }
+
+    const jobId = Date.now().toString();
+    activeJobs[jobId] = {
+        emails: validEmails,
+        processed: 0,
+        valid: 0,
+        invalid: 0,
+        catchall: 0,
+        risky: 0,
+        results: [],    // Store every result for download
+        recentValid: [], // For real-time UI
+        recentInvalid: [], // For real-time UI
+        status: 'running',
+    };
+    res.json({ jobId, total: validEmails.length });
+
+    // Fire and forget — processJob handles its own errors
+    processJob(jobId);
 });
 
 // ======================== PROGRESS POLLING ========================
@@ -170,23 +185,37 @@ app.get('/api/download/:jobId', (req, res) => {
         return res.status(400).json({ error: 'Job still processing.' });
     }
 
-    // Build CSV string
-    const header = 'Email,Status,Score,Provider,Category,Activity,Reason,Disposable,RoleBased,CatchAll';
-    const rows = job.results.map((r) => {
-        return [
-            `"${r.email}"`,
-            r.status,
-            r.score,
-            `"${r.providerType}"`,
-            `"${r.emailCategory || ''}"`,
-            `"${r.activity || ''}"`,
-            r.reasonCode,
-            r.flags.disposable,
-            r.flags.roleBased,
-            r.flags.catchAll,
-        ].join(',');
-    });
-    const csvContent = [header, ...rows].join('\n');
+    const format = req.query.format || 'csv';
+
+    // Filter to only include valid emails
+    const validResults = job.results.filter(r => r.status === 'valid' || r.status === 'role_based');
+
+    if (format === 'txt') {
+        const txtContent = validResults.map(r => `${r.email} - ${r.providerType}`).join('\n');
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename="verified_emails_${req.params.jobId}.txt"`);
+        return res.send(txtContent);
+    }
+
+    // Build CSV/Excel arrays
+    const headerRow = ['Email', 'Type'];
+    const rows = validResults.map(r => [r.email, r.providerType]);
+    
+    if (format === 'excel') {
+        const ws = xlsx.utils.aoa_to_sheet([headerRow, ...rows]);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, "Valid Emails");
+        const excelBuffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="verified_emails_${req.params.jobId}.xlsx"`);
+        return res.send(excelBuffer);
+    }
+
+    // Default CSV
+    const csvContent = [
+        headerRow.join(','),
+        ...rows.map(row => `"${row[0]}","${row[1]}"`)
+    ].join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="verified_emails_${req.params.jobId}.csv"`);

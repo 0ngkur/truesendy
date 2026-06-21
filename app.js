@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressStatus = document.getElementById('progress-status');
     const dailyCreditsEl = document.getElementById('daily-credits');
     const downloadSection = document.getElementById('download-section');
-    const downloadBtn = document.getElementById('download-btn');
     const resetBtn = document.getElementById('reset-btn');
 
     const statValid = document.getElementById('stat-valid');
@@ -59,8 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ======================== BULK FILE HANDLER ========================
 
     async function handleFile(file) {
-        if (!file.name.endsWith('.csv')) {
-            alert('Please upload a CSV file.');
+        const validExts = ['.csv', '.txt', '.xlsx', '.xls', '.pdf', '.docx'];
+        const isSupported = validExts.some(ext => file.name.toLowerCase().endsWith(ext));
+        if (!isSupported) {
+            alert(`Please upload a supported file format: ${validExts.join(', ')}`);
             return;
         }
 
@@ -127,8 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             ? '✅ Verification Complete!'
                             : '⚠️ Stopped — Out of Credits';
 
-                        // Show download button
-                        downloadBtn.href = `/api/download/${jobId}`;
+                        // Show download buttons
+                        document.getElementById('download-btn-csv').href = `/api/download/${jobId}?format=csv`;
+                        document.getElementById('download-btn-excel').href = `/api/download/${jobId}?format=excel`;
+                        document.getElementById('download-btn-txt').href = `/api/download/${jobId}?format=txt`;
                         downloadSection.style.display = 'flex';
                     }
                 } catch (pollErr) {

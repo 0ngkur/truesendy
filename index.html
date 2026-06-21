@@ -25,8 +25,8 @@
 
             <div class="upload-zone" id="upload-zone">
                 <div class="upload-icon">📁</div>
-                <p>Drag & Drop your CSV here or <strong>Browse</strong></p>
-                <input type="file" id="file-input" accept=".csv" hidden>
+                <p>Drag & Drop your file here or <strong>Browse</strong><br><small style="opacity:0.6;">Supports: CSV, TXT, Excel, PDF, Word</small></p>
+                <input type="file" id="file-input" accept=".csv,.txt,.xlsx,.xls,.pdf,.docx" hidden>
             </div>
 
             <div class="single-check-zone">
@@ -75,9 +75,14 @@
                 </div>
             </div>
 
-            <div id="download-section" style="display: none; margin-top: 2rem; text-align: center; gap: 1rem; justify-content: center; align-items: center;">
-                <a id="download-btn" class="glass-btn download-btn" href="#" download>⬇ Download Cleaned CSV</a>
-                <button id="reset-btn" class="glass-btn" style="background: rgba(255,255,255,0.1); margin-left: 1rem;">Verify Another List</button>
+            <div id="download-section" style="display: none; margin-top: 2rem; text-align: center; gap: 1rem; justify-content: center; align-items: center; flex-direction: column;">
+                <p style="margin-bottom: 0;"><strong>Download Valid Emails As:</strong></p>
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a id="download-btn-csv" class="glass-btn download-btn" href="#" download>⬇ CSV</a>
+                    <a id="download-btn-excel" class="glass-btn download-btn" href="#" download>⬇ Excel</a>
+                    <a id="download-btn-txt" class="glass-btn download-btn" href="#" download>⬇ TXT</a>
+                </div>
+                <button id="reset-btn" class="glass-btn" style="background: rgba(255,255,255,0.1); margin-top: 1rem;">Verify Another List</button>
             </div>
         </main>
     </div>
