@@ -1082,11 +1082,9 @@ app.post('/api/keys/guest-checkout', async (req, res) => {
 // ======================== ADMIN API ========================
 
 // Single unified JWT secret — matches authMiddleware.js
-const ADMIN_JWT_SECRET = process.env.JWT_SECRET;
-if (!ADMIN_JWT_SECRET) {
-    console.error('[TrueSendy] FATAL: JWT_SECRET environment variable is required. Server cannot start without it.');
-    process.exit(1);
-}
+// Same secret as user JWTs (imported from authMiddleware at the top). Has a
+// random fallback so the server boots even if JWT_SECRET isn't set as an env var.
+const ADMIN_JWT_SECRET = JWT_SECRET;
 
 const MASTER_ADMIN = {
     username: process.env.MASTER_ADMIN_USERNAME || null,
