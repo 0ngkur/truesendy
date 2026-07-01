@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Download TrueSendy — Email Verification Desktop App for Windows</title>
+    <meta name="description" content="Download the TrueSendy desktop app for Windows. Verify email lists right from your desktop with your Agency Plan API key.">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ── Download Page — shares EXACT same CSS as subscribePlan ── */
+        .sub-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: 88px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .sub-header {
+            text-align: center;
+            padding: 3.5rem 2rem 2rem;
+        }
+
+        .sub-header .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            transition: color var(--transition-fast);
+            cursor: pointer;
+        }
+
+        .sub-header .back-link:hover { color: var(--blue-600); }
+
+        .sub-header h1 {
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.75rem;
+        }
+
+        .sub-header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            max-width: 480px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        .sub-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
+        }
+
+        .sub-card {
+            background: var(--bg-white);
+            border: 1.5px solid var(--border-card);
+            border-radius: var(--radius-2xl);
+            padding: 2.5rem;
+            position: relative;
+            transition: all var(--transition-smooth);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sub-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--blue-200);
+        }
+
+        .sub-card.featured {
+            border-color: var(--blue-300);
+            box-shadow: var(--shadow-lg), 0 0 60px rgba(59, 130, 246, 0.08);
+        }
+
+        .sub-card .plan-badge {
+            position: absolute;
+            top: -13px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+            color: white;
+            padding: 0.3rem 1.1rem;
+            border-radius: var(--radius-full);
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            white-space: nowrap;
+            box-shadow: 0 4px 16px var(--blue-glow);
+        }
+
+        .plan-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .plan-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+            color: var(--text-heading);
+        }
+
+        .plan-tagline {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-credits {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--blue-50);
+            border: 1px solid var(--blue-100);
+            padding: 0.6rem 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--blue-700);
+        }
+
+        .plan-features {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-bottom: 2rem;
+        }
+
+        .plan-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .feat-check {
+            color: var(--success);
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .feat-x {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .plan-features li.disabled { opacity: 0.45; }
+        .plan-features a { color: var(--blue-600); font-weight: 600; }
+
+        .sub-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.95rem;
+            border-radius: var(--radius-md);
+            font-size: 0.92rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-family: 'Inter', sans-serif;
+            min-height: 48px;
+            text-decoration: none;
+        }
+
+        .sub-btn-primary {
+            background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+            color: white;
+            box-shadow: var(--shadow-blue);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sub-btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        .sub-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.3);
+        }
+
+        .sub-btn-outline {
+            background: transparent;
+            color: var(--blue-600);
+            border: 1.5px solid var(--blue-300);
+        }
+
+        .sub-btn-outline:hover {
+            background: var(--blue-50);
+            border-color: var(--blue-500);
+        }
+
+        .free-tier-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
+        }
+
+        .free-tier-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+            padding: 2rem 2.5rem;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(79, 70, 229, 0.04));
+            border: 1.5px dashed var(--blue-200);
+            border-radius: var(--radius-2xl);
+            flex-wrap: wrap;
+        }
+
+        .free-tier-info h3 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 0.4rem;
+            color: var(--text-heading);
+        }
+
+        .free-tier-info p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .free-pills {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .free-pill {
+            background: var(--blue-50);
+            border: 1px solid var(--blue-100);
+            color: var(--blue-700);
+            padding: 0.3rem 0.8rem;
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .faq-section {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 2rem 2rem 5rem;
+        }
+
+        .faq-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            color: var(--text-heading);
+        }
+
+        .faq-item {
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .faq-q {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.1rem 0;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--text-heading);
+            gap: 1rem;
+        }
+
+        .faq-chevron {
+            transition: transform 0.3s ease;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+        .faq-a {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+
+        .faq-item.open .faq-a { max-height: 200px; }
+        .faq-a-inner { padding-bottom: 1rem; }
+
+        .guarantee-strip {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+
+        .guarantee-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .guarantee-icon { font-size: 1.1rem; }
+
+        .dl-steps-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        @media (max-width: 900px) {
+            .sub-grid { grid-template-columns: 1fr; max-width: 480px; }
+        }
+
+        @media (max-width: 600px) {
+            .sub-page { padding-top: 72px; }
+            .sub-header { padding: 2rem 1.25rem 1rem; }
+            .sub-grid { padding: 0 1.25rem 3rem; }
+            .free-tier-section, .faq-section, .guarantee-strip, .dl-steps-section { padding-left: 1.25rem; padding-right: 1.25rem; }
+            .free-tier-card { flex-direction: column; align-items: flex-start; }
+            .sub-card { padding: 2rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="mouse-orb"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="particles" id="particles"></div>
+
+    <nav class="navbar scrolled" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <img src="/assets/logo.png" alt="TrueSendy" class="logo-icon" style="height:28px;vertical-align:middle">
+                True<span class="logo-accent">Sendy</span>
+            </a>
+            <div class="nav-links">
+                <a href="/#features">Features</a>
+                <a href="/#how-it-works">How It Works</a>
+                <a href="/subscribePlan">Pricing</a>
+                <a href="/downloads" style="color:var(--blue-600);font-weight:700">Download</a>
+                <a href="/#verify">Verify</a>
+            </div>
+            <div class="nav-actions">
+                <a href="/" class="btn btn-ghost" style="font-size:0.85rem;padding:0.5rem 1.1rem;">Back to Home</a>
+            </div>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/#features">Features</a>
+        <a href="/#how-it-works">How It Works</a>
+        <a href="/subscribePlan">Pricing</a>
+        <a href="/downloads">Download</a>
+        <a href="/#verify">Verify</a>
+        <a href="/">Back to Home</a>
+    </div>
+
+    <div class="sub-page">
+
+        <div class="sub-header">
+            <div class="section-tag">Desktop App</div>
+            <h1>Download <span class="gradient-text">TrueSendy</span></h1>
+            <p>The Windows desktop app for email verification. Install it, activate with your API key, and verify lists right from your desktop.</p>
+        </div>
+
+        <div class="free-tier-section">
+            <div class="free-tier-card">
+                <div class="free-tier-info">
+                    <h3>TrueSendy Setup v1.0.0</h3>
+                    <p>Full Windows desktop application. Double-click to install. Activate with your API key and start verifying.</p>
+                    <div class="free-pills">
+                        <span class="free-pill">Windows 10/11 x64</span>
+                        <span class="free-pill">~100 MB installer</span>
+                        <span class="free-pill">100K verifications/key</span>
+                    </div>
+                </div>
+                <div>
+                    <a href="/downloads/TrueSendy-Setup.exe" class="sub-btn sub-btn-primary" style="white-space:nowrap;width:auto;padding:0.95rem 2rem;">Download Installer</a>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;text-align:center;">TrueSendy Setup 1.0.0.exe</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sub-grid">
+            <div class="sub-card featured">
+                <div class="plan-badge">Required</div>
+                <span class="plan-icon">Key</span>
+                <div class="plan-name">Agency Plan API Key</div>
+                <div class="plan-tagline">Required to activate the desktop app</div>
+                <div class="plan-credits">
+                    <strong>100,000</strong> verifications per key
+                </div>
+                <ul class="plan-features">
+                    <li><span class="feat-check">✓</span> Purchase Agency Plan ($149/mo)</li>
+                    <li><span class="feat-check">✓</span> Generate key from your dashboard</li>
+                    <li><span class="feat-check">✓</span> Paste key into the desktop app</li>
+                    <li><span class="feat-check">✓</span> Key activates instantly</li>
+                    <li><span class="feat-check">✓</span> Credits tracked on server</li>
+                </ul>
+                <a href="/subscribePlan?plan=agency" class="sub-btn sub-btn-primary">Get Agency Plan</a>
+            </div>
+
+            <div class="sub-card">
+                <span class="plan-icon">Features</span>
+                <div class="plan-name">What You Get</div>
+                <div class="plan-tagline">Everything included with the desktop app</div>
+                <div class="plan-credits">
+                    <strong>Full</strong> verification engine
+                </div>
+                <ul class="plan-features">
+                    <li><span class="feat-check">✓</span> Upload CSV, TXT, Excel, PDF, Word</li>
+                    <li><span class="feat-check">✓</span> Real SMTP deep verification</li>
+                    <li><span class="feat-check">✓</span> Real-time progress dashboard</li>
+                    <li><span class="feat-check">✓</span> Export VALID and INVALID lists</li>
+                    <li><span class="feat-check">✓</span> CSV, Excel, TXT export formats</li>
+                    <li><span class="feat-check">✓</span> Credit balance always visible</li>
+                </ul>
+                <a href="/downloads/TrueSendy-Setup.exe" class="sub-btn sub-btn-outline">Download Now</a>
+            </div>
+        </div>
+
+        <div class="dl-steps-section">
+            <div class="sub-header" style="padding-top:1rem;">
+                <div class="section-tag">Quick Start</div>
+                <h1 style="font-size:clamp(1.8rem,4vw,2.5rem);">3 Steps to <span class="gradient-text">Get Started</span></h1>
+                <p>Start verifying emails in minutes.</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <div class="step-content">
+                        <h3>Purchase Agency Plan</h3>
+                        <p>Subscribe to the Agency Plan from our pricing page. Generate your API key from the dashboard.</p>
+                    </div>
+                    <div class="step-line"></div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <div class="step-content">
+                        <h3>Install and Activate</h3>
+                        <p>Download and run the installer. Open TrueSendy, paste your API key, click Activate.</p>
+                    </div>
+                    <div class="step-line"></div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <div class="step-content">
+                        <h3>Start Verifying</h3>
+                        <p>Upload any email list. Each verified email uses 1 credit. Export clean lists when done.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-section">
+            <div class="faq-title">Frequently Asked Questions</div>
+            <div class="faq-item" onclick="this.classList.toggle('open')">
+                <div class="faq-q">Do I need an API key to use the app? <span class="faq-chevron">▼</span></div>
+                <div class="faq-a"><div class="faq-a-inner">Yes. The desktop app requires an Agency Plan API key to verify emails. You can purchase the Agency Plan from our <a href="/subscribePlan" style="color:var(--blue-600);font-weight:600;">pricing page</a> and generate your key from the dashboard.</div></div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('open')">
+                <div class="faq-q">How many emails can I verify? <span class="faq-chevron">▼</span></div>
+                <div class="faq-a"><div class="faq-a-inner">Each API key comes with 100,000 verification credits. Each email verified uses 1 credit. When you run out, purchase a new key from your dashboard.</div></div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('open')">
+                <div class="faq-q">What file formats are supported? <span class="faq-chevron">▼</span></div>
+                <div class="faq-a"><div class="faq-a-inner">The app supports CSV, TXT, Excel (.xlsx, .xls), PDF, and Word (.docx) files. Emails are automatically extracted from any text content.</div></div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('open')">
+                <div class="faq-q">Does it work offline? <span class="faq-chevron">▼</span></div>
+                <div class="faq-a"><div class="faq-a-inner">No. The app connects to truesendy.com to validate your API key and track credits. The actual email verification happens on our servers.</div></div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('open')">
+                <div class="faq-q">What operating systems are supported? <span class="faq-chevron">▼</span></div>
+                <div class="faq-a"><div class="faq-a-inner">Windows 10 and Windows 11 (64-bit). The installer creates a desktop shortcut automatically.</div></div>
+            </div>
+        </div>
+
+        <div class="guarantee-strip">
+            <div class="guarantee-item"><span class="guarantee-icon">🔒</span> Secure payment via Stripe</div>
+            <div class="guarantee-item"><span class="guarantee-icon">⚡</span> Instant activation</div>
+            <div class="guarantee-item"><span class="guarantee-icon">📧</span> 100K credits per key</div>
+            <div class="guarantee-item"><span class="guarantee-icon">🪟</span> Windows 10/11 x64</div>
+        </div>
+
+    </div>
+
+    <script>
+        (function() {
+            const orb = document.getElementById('mouse-orb');
+            if (!orb || window.matchMedia('(hover:none)').matches) return;
+            let cx = window.innerWidth/2, cy = window.innerHeight/2;
+            let tx = cx, ty = cy, entered = false;
+            function tick() {
+                cx += (tx - cx) * 0.06;
+                cy += (ty - cy) * 0.06;
+                orb.style.transform = 'translate(' + (cx - 200) + 'px, ' + (cy - 200) + 'px)';
+                requestAnimationFrame(tick);
+            }
+            document.addEventListener('mousemove', e => {
+                tx = e.clientX; ty = e.clientY;
+                if (!entered) { entered = true; cx = tx; cy = ty; orb.classList.add('visible'); tick(); }
+            }, { passive: true });
+            document.addEventListener('mouseleave', () => orb.classList.remove('visible'));
+            document.addEventListener('mouseenter', () => { if (entered) orb.classList.add('visible'); });
+        })();
+
+        (function() {
+            const c = document.getElementById('particles');
+            if (!c) return;
+            for (var i = 0; i < 15; i++) {
+                var p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+                p.style.animationDuration = (12 + Math.random() * 14) + 's';
+                p.style.animationDelay = Math.random() * 16 + 's';
+                p.style.opacity = 0.1 + Math.random() * 0.3;
+                c.appendChild(p);
+            }
+        })();
+
+        (function() {
+            const b = document.getElementById('mobile-menu-btn');
+            const m = document.getElementById('mobile-menu');
+            if (b && m) {
+                b.addEventListener('click', () => m.classList.toggle('open'));
+                m.querySelectorAll('a').forEach(a => a.addEventListener('click', () => m.classList.remove('open')));
+            }
+        })();
+
+        // ── Premium-gated bot download ────────────────────────────────────────
+        // The bot is downloadable only by premium users (paid plan OR purchased
+        // key). Free / logged-out users are redirected to sign in or buy.
+        (async function() {
+            const dlLinks = Array.from(document.querySelectorAll('a[href*="/downloads/TrueSendy"]'));
+            if (!dlLinks.length) return;
+            const token = localStorage.getItem('ts_token');
+            if (!token) {
+                dlLinks.forEach(a => { a.addEventListener('click', e => { e.preventDefault(); window.location.href = '/signin'; }); });
+                return;
+            }
+            try {
+                const u = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()).then(d => d.user || {});
+                const premium = (u.plan && u.plan !== 'free') || (u.purchasedTokens > 0);
+                if (premium) {
+                    dlLinks.forEach(a => { a.href = a.href.split('?')[0] + '?token=' + encodeURIComponent(token); });
+                } else {
+                    dlLinks.forEach(a => {
+                        a.addEventListener('click', e => { e.preventDefault(); window.location.href = '/key'; });
+                        a.textContent = '🔓 Buy a Key to Download';
+                    });
+                }
+            } catch { /* fall through — link will 401 on click */ }
+        })();
+    </script>
+</body>
+</html>

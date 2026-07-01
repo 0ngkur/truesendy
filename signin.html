@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title id="page-title">Sign In — TrueSendy</title>
+    <meta name="description" content="Sign in or create your TrueSendy account. Get 5 free email verifications every month.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ── Auth Page Layout ── */
+        .auth-page {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        /* Left — brand panel */
+        .auth-brand {
+            background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-brand::before {
+            content: '';
+            position: absolute;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%);
+            top: -100px; right: -100px;
+            border-radius: 50%;
+            animation: orb-breathe 8s ease-in-out infinite;
+        }
+
+        .auth-brand::after {
+            content: '';
+            position: absolute;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%);
+            bottom: -50px; left: -50px;
+            border-radius: 50%;
+            animation: orb-breathe 12s ease-in-out infinite reverse;
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 3rem;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.5px;
+            text-decoration: none;
+        }
+
+        .brand-logo-icon { height: 32px; vertical-align: middle; }
+        .brand-logo-accent { color: #93c5fd; }
+
+        .brand-headline {
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
+            font-weight: 900;
+            color: white;
+            line-height: 1.2;
+            margin-bottom: 1.25rem;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-headline span { color: #93c5fd; }
+
+        .brand-desc {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.75;
+            margin-bottom: 2.5rem;
+            max-width: 380px;
+        }
+
+        .brand-stats {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .brand-stat {
+            text-align: left;
+        }
+
+        .brand-stat-number {
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+        }
+
+        .brand-stat-label {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.55);
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .brand-free-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 0.6rem 1.25rem;
+            border-radius: 50px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        .brand-free-dot {
+            width: 8px; height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(74,222,128,0.6);
+            animation: dot-breathe 2s ease-in-out infinite;
+        }
+
+        /* Testimonials on brand panel */
+        .brand-testimonial {
+            position: absolute;
+            bottom: 2.5rem;
+            left: 4rem;
+            right: 4rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            z-index: 2;
+        }
+
+        .testimonial-text {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.85);
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .testimonial-avatar {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .testimonial-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .testimonial-role {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Right — form panel */
+        .auth-form-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem 2rem;
+            background: white;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .auth-form-inner {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Tab switcher */
+        .auth-tabs {
+            display: flex;
+            background: var(--bg-subtle);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-light);
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.65rem;
+            border-radius: calc(var(--radius-md) - 2px);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        .auth-tab.active {
+            background: white;
+            color: var(--text-heading);
+            box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+        }
+
+        .auth-form-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 0.4rem;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.3px;
+        }
+
+        .auth-form-subtitle {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 1.75rem;
+            line-height: 1.5;
+        }
+
+        /* Free badge on form */
+        .form-free-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+            padding: 0.35rem 0.9rem;
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.2px;
+        }
+
+        /* Form */
+        .auth-field {
+            margin-bottom: 1.1rem;
+        }
+
+        .auth-label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-body);
+            margin-bottom: 0.4rem;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1.5px solid var(--border-card);
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-heading);
+            background: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .auth-input:focus {
+            border-color: var(--blue-400);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+
+        .auth-input::placeholder { color: var(--text-muted); }
+
+        /* Password toggle */
+        .auth-input-wrap {
+            position: relative;
+        }
+
+        .auth-input-wrap .auth-input {
+            padding-right: 3rem;
+        }
+
+        .pw-toggle {
+            position: absolute;
+            right: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--text-muted);
+            user-select: none;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .pw-toggle:hover { color: var(--blue-600); }
+
+        /* Submit btn */
+        .auth-submit {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            min-height: 48px;
+        }
+
+        .auth-submit::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        .auth-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37,99,235,0.3);
+        }
+
+        .auth-submit:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        /* Divider */
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.25rem 0;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-light);
+        }
+
+        /* Switch link */
+        .auth-switch {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 1.5rem;
+        }
+
+        .auth-switch a {
+            color: var(--blue-600);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .auth-switch a:hover { text-decoration: underline; }
+
+        /* Error / success */
+        .auth-error {
+            color: #dc2626;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            min-height: 1.2em;
+            font-weight: 500;
+        }
+
+        .auth-success {
+            color: #15803d;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* OTP Screen */
+        .otp-screen {
+            display: none;
+        }
+
+        .otp-screen.active { display: block; }
+
+        .otp-inputs {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+
+        .otp-digit {
+            width: 52px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            border: 2px solid var(--border-card);
+            border-radius: var(--radius-md);
+            outline: none;
+            transition: all 0.2s;
+            color: var(--text-heading);
+            background: white;
+        }
+
+        .otp-digit:focus {
+            border-color: var(--blue-400);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+
+        .otp-digit.filled { border-color: var(--blue-500); background: var(--blue-50); }
+
+        .otp-email-target {
+            color: var(--blue-700);
+            font-weight: 700;
+            font-size: 0.88rem;
+        }
+
+        .otp-resend {
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+        }
+
+        .otp-resend span {
+            color: var(--blue-600);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .otp-resend span:hover { text-decoration: underline; }
+
+        /* Terms */
+        .auth-terms {
+            font-size: 0.73rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 1.25rem;
+            line-height: 1.6;
+        }
+
+        .auth-terms a {
+            color: var(--blue-500);
+            text-decoration: none;
+        }
+
+        /* Back link */
+        .auth-back {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+
+        .auth-back:hover { color: var(--blue-600); }
+
+        /* ── Responsive ── */
+        @media (max-width: 800px) {
+            .auth-page { grid-template-columns: 1fr; }
+            .auth-brand {
+                display: none; /* hide brand panel on mobile */
+            }
+            .auth-form-panel {
+                padding: 2rem 1.5rem;
+                min-height: 100dvh;
+                justify-content: flex-start;
+                padding-top: 3rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .otp-digit { width: 44px; height: 52px; font-size: 1.3rem; }
+            .auth-form-inner { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="mouse-orb"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="particles" id="particles"></div>
+
+    <div class="auth-page">
+
+        <!-- ── LEFT: Brand Panel ── -->
+        <div class="auth-brand">
+            <div class="brand-content">
+                <a href="/" class="brand-logo">
+                    <img src="/assets/logo.png" alt="TrueSendy" class="brand-logo-icon" style="height:32px;vertical-align:middle">
+                    True<span class="brand-logo-accent">Sendy</span>
+                </a>
+
+                <div class="brand-free-badge">
+                    <div class="brand-free-dot"></div>
+                    5 free verifications every month
+                </div>
+
+                <h1 class="brand-headline">
+                    Stop Sending to<br>
+                    <span>Dead Inboxes</span>
+                </h1>
+                <p class="brand-desc">
+                    TrueSendy verifies every email before you send — using multi-layer SMTP probing and real-time DNS checks. No more bounces. No more spam flags. Just clean lists that actually convert.
+                </p>
+
+                <div class="brand-stats">
+                    <div class="brand-stat">
+                        <div class="brand-stat-number">99.2%</div>
+                        <div class="brand-stat-label">Accuracy Rate</div>
+                    </div>
+                    <div class="brand-stat">
+                        <div class="brand-stat-number">50x</div>
+                        <div class="brand-stat-label">Concurrent checks</div>
+                    </div>
+                    <div class="brand-stat">
+                        <div class="brand-stat-number">100k+</div>
+                        <div class="brand-stat-label">Emails/batch</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="brand-testimonial">
+                <div class="testimonial-text">"Switched to TrueSendy and our bounce rate dropped from 12% to under 0.5% in the first campaign. Absolute game changer for our agency."</div>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">MR</div>
+                    <div>
+                        <div class="testimonial-name">Marcus R.</div>
+                        <div class="testimonial-role">Growth Lead · ScaleOps Agency</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: Auth Form Panel ── -->
+        <div class="auth-form-panel">
+            <div class="auth-form-inner">
+
+                <!-- Back link -->
+                <a href="/" class="auth-back">← Back to TrueSendy</a>
+
+                <!-- Tab switcher -->
+                <div class="auth-tabs">
+                    <div class="auth-tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</div>
+                    <div class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</div>
+                </div>
+
+                <!-- ── SIGN IN FORM ── -->
+                <div id="screen-signin">
+                    <div class="auth-form-title">Welcome back 👋</div>
+                    <div class="auth-form-subtitle">Sign in to your TrueSendy account</div>
+
+                    <div class="auth-field">
+                        <label class="auth-label">Email address</label>
+                        <input type="email" class="auth-input" id="si-email" placeholder="you@agency.com" autocomplete="email">
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-label">Password</label>
+                        <div class="auth-input-wrap">
+                            <input type="password" class="auth-input" id="si-password" placeholder="••••••••" autocomplete="current-password">
+                            <button class="pw-toggle" onclick="togglePw('si-password', this)" tabindex="-1">👁</button>
+                        </div>
+                    </div>
+
+                    <div class="auth-error" id="si-error"></div>
+
+                    <button class="auth-submit" id="si-btn" onclick="doSignIn()">Sign In →</button>
+
+                    <div class="auth-divider">or</div>
+
+                    <div style="text-align:center;font-size:0.82rem;color:var(--text-muted)">
+                        Forgot your password? <a href="#" onclick="showForgot()" style="color:var(--blue-600);font-weight:600">Reset it</a>
+                    </div>
+                </div>
+
+                <!-- ── SIGN UP FORM ── -->
+                <div id="screen-signup" style="display:none">
+                    <div class="auth-form-title">Create your account</div>
+                    <div class="auth-form-subtitle">Start with 5 free email verifications every month</div>
+
+                    <div class="form-free-badge">
+                        🎁 Free forever — no credit card required
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-label">Username</label>
+                        <input type="text" class="auth-input" id="su-username" placeholder="e.g. coldoutreach_pro" autocomplete="username">
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-label">Email address</label>
+                        <input type="email" class="auth-input" id="su-email" placeholder="you@agency.com" autocomplete="email">
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-label">Password <span style="color:var(--text-muted);font-weight:400">(min 6 characters)</span></label>
+                        <div class="auth-input-wrap">
+                            <input type="password" class="auth-input" id="su-password" placeholder="••••••••" autocomplete="new-password">
+                            <button class="pw-toggle" onclick="togglePw('su-password', this)" tabindex="-1">👁</button>
+                        </div>
+                    </div>
+
+                    <div class="auth-error" id="su-error"></div>
+
+                    <button class="auth-submit" id="su-btn" onclick="doSignUp()">Create Free Account →</button>
+
+                    <div class="auth-terms">
+                        By signing up you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+                    </div>
+                </div>
+
+                <!-- ── OTP VERIFICATION ── -->
+                <div id="screen-otp" style="display:none">
+                    <div class="auth-form-title">Verify your email ✉️</div>
+                    <div class="auth-form-subtitle">
+                        We sent a 6-digit code to<br>
+                        <span class="otp-email-target" id="otp-email-display">your email</span>
+                    </div>
+
+                    <div class="otp-inputs" id="otp-inputs">
+                        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    </div>
+
+                    <div class="auth-error" id="otp-error"></div>
+                    <div class="auth-success" id="otp-success"></div>
+
+                    <button class="auth-submit" id="otp-btn" onclick="doVerifyOTP()">Verify & Get Started →</button>
+
+                    <div class="otp-resend">
+                        Didn't receive it? <span onclick="doResend()">Resend code</span>
+                    </div>
+                </div>
+
+                <!-- ── FORGOT PASSWORD ── -->
+                <div id="screen-forgot" style="display:none">
+                    <div class="auth-back" style="cursor:pointer;margin-bottom:1.25rem" onclick="showScreen('signin')">← Back to Sign In</div>
+                    <div class="auth-form-title">Reset password 🔑</div>
+                    <div class="auth-form-subtitle">Enter your email and we'll send a reset code</div>
+
+                    <div class="auth-field">
+                        <label class="auth-label">Email address</label>
+                        <input type="email" class="auth-input" id="fp-email" placeholder="you@agency.com">
+                    </div>
+
+                    <div class="auth-error" id="fp-error"></div>
+                    <div class="auth-success" id="fp-success"></div>
+
+                    <button class="auth-submit" id="fp-btn" onclick="doForgot()">Send Reset Code →</button>
+                </div>
+
+                <!-- ── SWITCH LINK ── -->
+                <div class="auth-switch" id="auth-switch-link">
+                    Don't have an account? <a onclick="switchTab('signup')">Sign up free</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── State ──
+        let pendingEmail = '';
+        let authToken = localStorage.getItem('ts_token') || null;
+        let activeScreen = 'signin';
+
+        // ── Read URL param ── /signin vs /signup
+        const path = window.location.pathname;
+        if (path === '/signup' || path === '/signup/') {
+            switchTab('signup');
+        }
+
+        // ── If already logged in, redirect home ──
+        if (authToken) {
+            fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + authToken } })
+                .then(r => r.json())
+                .then(d => { if (d.user) window.location.href = '/'; })
+                .catch(() => {});
+        }
+
+        // ── Tab switcher ──
+        function switchTab(tab) {
+            document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
+            document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+            showScreen(tab);
+            document.getElementById('auth-switch-link').innerHTML = tab === 'signin'
+                ? 'Don\'t have an account? <a onclick="switchTab(\'signup\')">Sign up free</a>'
+                : 'Already have an account? <a onclick="switchTab(\'signin\')">Sign in</a>';
+            document.getElementById('page-title').textContent =
+                tab === 'signin' ? 'Sign In — TrueSendy' : 'Create Account — TrueSendy';
+            // update URL without reload
+            history.replaceState({}, '', tab === 'signin' ? '/signin' : '/signup');
+        }
+
+        function showScreen(name) {
+            ['signin', 'signup', 'otp', 'forgot'].forEach(s => {
+                document.getElementById('screen-' + s).style.display = s === name ? '' : 'none';
+            });
+            activeScreen = name;
+            // hide tabs & switch link during otp/forgot
+            const hideTabs = name === 'otp' || name === 'forgot';
+            document.querySelector('.auth-tabs').style.display = hideTabs ? 'none' : '';
+            document.getElementById('auth-switch-link').style.display = hideTabs ? 'none' : '';
+        }
+
+        function showForgot() { showScreen('forgot'); }
+
+        // ── Password toggle ──
+        function togglePw(id, btn) {
+            const inp = document.getElementById(id);
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+            btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+        }
+
+        // ── API helpers ──
+        async function apiPost(url, body) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            return res.json();
+        }
+
+        function setLoading(btnId, loading, text) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = loading;
+            btn.textContent = loading ? 'Please wait…' : text;
+        }
+
+        // ── SIGN IN ──
+        async function doSignIn() {
+            const email    = document.getElementById('si-email').value.trim();
+            const password = document.getElementById('si-password').value;
+            const errEl    = document.getElementById('si-error');
+            errEl.textContent = '';
+
+            if (!email || !password) { errEl.textContent = 'Email and password are required.'; return; }
+
+            setLoading('si-btn', true, 'Sign In →');
+            const data = await apiPost('/api/auth/login', { email, password });
+            setLoading('si-btn', false, 'Sign In →');
+
+            if (data.error) { errEl.textContent = data.error; return; }
+
+            authToken = data.token;
+            localStorage.setItem('ts_token', data.token);
+
+            if (data.needsVerification) {
+                pendingEmail = email;
+                document.getElementById('otp-email-display').textContent = email;
+                showScreen('otp');
+                initOTPInputs();
+                return;
+            }
+
+            // Success — go home
+            window.location.href = '/#verify';
+        }
+
+        // ── SIGN UP ──
+        async function doSignUp() {
+            const username = document.getElementById('su-username').value.trim();
+            const email    = document.getElementById('su-email').value.trim();
+            const password = document.getElementById('su-password').value;
+            const errEl    = document.getElementById('su-error');
+            errEl.textContent = '';
+
+            if (!username || !email || !password) { errEl.textContent = 'All fields are required.'; return; }
+            if (password.length < 6)              { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+            if (username.length < 3)              { errEl.textContent = 'Username must be at least 3 characters.'; return; }
+
+            setLoading('su-btn', true, 'Create Free Account →');
+            const data = await apiPost('/api/auth/register', { email, username, password });
+            setLoading('su-btn', false, 'Create Free Account →');
+
+            if (data.error) { errEl.textContent = data.error; return; }
+
+            authToken = data.token;
+            localStorage.setItem('ts_token', data.token);
+            pendingEmail = email;
+
+            document.getElementById('otp-email-display').textContent = email;
+            showScreen('otp');
+            initOTPInputs();
+            if (data.devOTP) {
+                const hint = document.getElementById('otp-error');
+                if (hint) { hint.style.color = '#10b981'; hint.textContent = `Dev mode — your code: ${data.devOTP}`; hint.style.display = 'block'; }
+            }
+        }
+
+        // ── OTP ──
+        function initOTPInputs() {
+            const digits = document.querySelectorAll('.otp-digit');
+            digits.forEach((inp, i) => {
+                inp.value = '';
+                inp.classList.remove('filled');
+                inp.oninput = () => {
+                    const v = inp.value.replace(/\D/g, '');
+                    inp.value = v.slice(-1);
+                    inp.classList.toggle('filled', inp.value !== '');
+                    if (inp.value && i < digits.length - 1) digits[i+1].focus();
+                    // auto-submit when all 6 filled
+                    const code = Array.from(digits).map(d => d.value).join('');
+                    if (code.length === 6) setTimeout(doVerifyOTP, 200);
+                };
+                inp.onkeydown = e => {
+                    if (e.key === 'Backspace' && !inp.value && i > 0) digits[i-1].focus();
+                };
+                inp.onpaste = e => {
+                    const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+                    pasted.split('').forEach((ch, j) => { if (digits[j]) { digits[j].value = ch; digits[j].classList.add('filled'); } });
+                    if (pasted.length === 6) setTimeout(doVerifyOTP, 200);
+                    e.preventDefault();
+                };
+            });
+            digits[0].focus();
+        }
+
+        function getOTPCode() {
+            return Array.from(document.querySelectorAll('.otp-digit')).map(d => d.value).join('');
+        }
+
+        async function doVerifyOTP() {
+            const code  = getOTPCode();
+            const errEl = document.getElementById('otp-error');
+            const okEl  = document.getElementById('otp-success');
+            errEl.textContent = ''; okEl.textContent = '';
+
+            if (code.length !== 6) { errEl.textContent = 'Enter the full 6-digit code.'; return; }
+
+            setLoading('otp-btn', true, 'Verify & Get Started →');
+            const data = await apiPost('/api/auth/verify-otp', {
+                email: pendingEmail,
+                otp: code,
+                purpose: 'verify'
+            });
+            setLoading('otp-btn', false, 'Verify & Get Started →');
+
+            if (data.error) { errEl.textContent = data.error; return; }
+
+            if (data.token) {
+                authToken = data.token;
+                localStorage.setItem('ts_token', data.token);
+            }
+
+            okEl.textContent = '✅ Email verified! Redirecting…';
+            setTimeout(() => window.location.href = '/#verify', 1200);
+        }
+
+        async function doResend() {
+            if (!pendingEmail || !authToken) return;
+            const data = await fetch('/api/auth/resend-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                body: JSON.stringify({ email: pendingEmail, purpose: 'verify' })
+            }).then(r => r.json());
+
+            const okEl = document.getElementById('otp-success');
+            okEl.textContent = data.devOTP ? `Dev mode — your code: ${data.devOTP}` : (data.message || 'Code resent!');
+        }
+
+        // ── FORGOT PASSWORD ──
+        async function doForgot() {
+            const email = document.getElementById('fp-email').value.trim();
+            const errEl = document.getElementById('fp-error');
+            const okEl  = document.getElementById('fp-success');
+            errEl.textContent = ''; okEl.textContent = '';
+
+            if (!email) { errEl.textContent = 'Enter your email address.'; return; }
+
+            setLoading('fp-btn', true, 'Send Reset Code →');
+            const data = await apiPost('/api/auth/forgot-password', { email });
+            setLoading('fp-btn', false, 'Send Reset Code →');
+
+            if (data.error) { errEl.textContent = data.error; return; }
+            okEl.textContent = '✅ Reset code sent! Check your inbox.';
+        }
+
+        // ── Fluid mouse orb ──
+        (function() {
+            const orb = document.getElementById('mouse-orb');
+            if (!orb || window.matchMedia('(hover:none)').matches) return;
+            let cx = window.innerWidth/2, cy = window.innerHeight/2;
+            let tx = cx, ty = cy, entered = false;
+            function tick() {
+                cx += (tx-cx)*0.06; cy += (ty-cy)*0.06;
+                orb.style.transform = `translate(${cx - 200}px, ${cy - 200}px)`;
+                requestAnimationFrame(tick);
+            }
+            document.addEventListener('mousemove', e => {
+                tx = e.clientX; ty = e.clientY;
+                if (!entered) { entered=true; cx=tx; cy=ty; orb.classList.add('visible'); tick(); }
+            }, {passive:true});
+            document.addEventListener('mouseleave', () => orb.classList.remove('visible'));
+            document.addEventListener('mouseenter', () => { if(entered) orb.classList.add('visible'); });
+        })();
+
+        // ── Particles ──
+        (function() {
+            const c = document.getElementById('particles');
+            if (!c) return;
+            for (var i = 0; i < 15; i++) {
+                var p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+                p.style.animationDuration = (12 + Math.random() * 14) + 's';
+                p.style.animationDelay = Math.random() * 16 + 's';
+                p.style.opacity = 0.1 + Math.random() * 0.3;
+                c.appendChild(p);
+            }
+        })();
+
+        // ── Enter key support ──
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            if (activeScreen === 'signin')  doSignIn();
+            if (activeScreen === 'signup')  doSignUp();
+            if (activeScreen === 'forgot')  doForgot();
+        });
+    </script>
+</body>
+</html>

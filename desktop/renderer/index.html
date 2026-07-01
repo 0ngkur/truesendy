@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TrueSendy</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ════════════ AUTH VIEW ════════════ -->
+<div id="auth-view" class="view">
+  <div class="auth-card">
+    <div class="brand"><img src="logo.png" class="brand-logo" alt="">True<span>Sendy</span></div>
+    <div class="auth-eyebrow">Email Verifier</div>
+    <h1 class="auth-h1">Welcome</h1>
+    <p class="auth-sub">Sign in with your TrueSendy account, or activate a key you bought at truesendy.com/key.</p>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="login">Sign in</div>
+      <div class="tab" data-tab="key">Enter key</div>
+    </div>
+
+    <div id="pane-login" class="pane">
+      <input id="li-email" type="email" placeholder="Email" autocomplete="email">
+      <input id="li-pass" type="password" placeholder="Password" autocomplete="current-password">
+      <button id="li-btn" class="btn-primary">Sign in →</button>
+    </div>
+
+    <div id="pane-key" class="pane" style="display:none">
+      <input id="key-input" type="text" placeholder="ts_…" autocomplete="off">
+      <button id="key-btn" class="btn-primary">Activate key →</button>
+    </div>
+
+    <div id="auth-err" class="err"></div>
+    <div class="auth-foot">No key? <a id="buy-key-link">Buy one at truesendy.com/key</a></div>
+    <div class="auth-foot"><a id="auth-settings-link">⚙ Server settings</a></div>
+  </div>
+</div>
+
+<!-- ════════════ MAIN VIEW ════════════ -->
+<div id="main-view" class="view" style="display:none">
+  <header class="topbar">
+    <div class="brand sm"><img src="logo.png" class="brand-logo" alt="">True<span>Sendy</span></div>
+    <div id="balance-pill" class="balance">— tokens</div>
+    <div class="top-actions">
+      <button id="settings-btn" class="btn-ghost icon" title="Server settings">⚙</button>
+      <button id="logout-btn" class="btn-ghost">Log out</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="panel upload-panel">
+      <div id="dropzone" class="dropzone">
+        <div class="dz-icon">📁</div>
+        <div class="dz-text">Choose a file or drag it here</div>
+        <div class="dz-sub">CSV · TXT · XLSX — emails are extracted automatically</div>
+        <button id="pick-btn" class="btn-primary">Choose file</button>
+      </div>
+      <div id="file-info" class="file-info"></div>
+      <button id="verify-btn" class="btn-verify" disabled>Verify emails</button>
+    </section>
+
+    <section class="panel results-panel">
+      <div class="stats">
+        <div class="stat"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Total</div></div>
+        <div class="stat ok"><div class="stat-num" id="st-valid">0</div><div class="stat-lbl">Valid</div></div>
+        <div class="stat bad"><div class="stat-num" id="st-invalid">0</div><div class="stat-lbl">Invalid</div></div>
+        <div class="stat skip"><div class="stat-num" id="st-skipped">0</div><div class="stat-lbl">Skipped</div></div>
+      </div>
+      <div class="progress-wrap"><div id="progress" class="progress-bar" style="width:0%"></div></div>
+      <div class="results-head">
+        <div class="results-title">Results</div>
+        <button id="export-btn" class="btn-ghost" disabled>Export valid ↓</button>
+      </div>
+      <div id="results-table" class="results-table"><div class="empty">Upload a file and verify to see results.</div></div>
+    </section>
+  </main>
+</div>
+
+<!-- ════════════ SETTINGS MODAL ════════════ -->
+<div id="settings-view" class="modal" style="display:none">
+  <div class="settings-card">
+    <div class="settings-title">⚙ Server settings</div>
+    <label for="host-input">TrueSendy server URL</label>
+    <input id="host-input" type="text" placeholder="https://truesendy.com">
+    <div class="hint">For local testing use <code>http://localhost:3000</code></div>
+    <div class="settings-actions">
+      <button id="settings-cancel" class="btn-ghost">Cancel</button>
+      <button id="settings-save" class="btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

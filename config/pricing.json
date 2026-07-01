@@ -1,0 +1,44 @@
+{
+  "plans": {
+    "starter": {
+      "name": "Starter",
+      "priceMonthly": 19,
+      "priceAnnual": 190,
+      "credits": 1000,
+      "stripePriceId": "",
+      "features": [
+        "Bulk upload (CSV, TXT, Excel)",
+        "SMTP deep verification",
+        "Download clean lists",
+        "Email support"
+      ]
+    },
+    "pro": {
+      "name": "Pro",
+      "priceMonthly": 49,
+      "priceAnnual": 490,
+      "credits": 10000,
+      "stripePriceId": "",
+      "features": [
+        "Everything in Starter",
+        "PDF & Word file support",
+        "Provider detection",
+        "Priority support"
+      ]
+    },
+    "agency": {
+      "name": "Agency",
+      "priceMonthly": 149,
+      "priceAnnual": 1490,
+      "credits": 100000,
+      "stripePriceId": "",
+      "features": [
+        "Everything in Pro",
+        "API access",
+        "Bulk batch processing",
+        "Dedicated support"
+      ]
+    }
+  },
+  "currency": "usd"
+}

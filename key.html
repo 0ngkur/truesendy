@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Buy a Verification Key — TrueSendy</title>
+    <meta name="description" content="Buy a TrueSendy verification key — 100,000 email verifications, delivered to your inbox instantly after payment.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { margin:0; background:#f8fafc; color:#0f172a; font-family:'Inter',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+        .key-page {
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:2.5rem 1.25rem;
+            position:relative;
+            z-index:2;
+        }
+
+        .key-card {
+            width:100%;
+            max-width:540px;
+            background:#ffffff;
+            border:1px solid rgba(59,130,246,0.22);
+            border-radius:22px;
+            padding:2.75rem 2.5rem;
+            box-shadow:0 10px 40px rgba(0,0,0,0.08), 0 0 100px rgba(59,130,246,0.10);
+        }
+
+        .key-logo {
+            display:flex; align-items:center; gap:0.5rem;
+            justify-content:center;
+            font-family:'Outfit',sans-serif;
+            font-weight:900; font-size:1.5rem;
+            color:#0f172a; text-decoration:none;
+            margin-bottom:0.5rem;
+        }
+        .key-logo img { height:30px; vertical-align:middle; }
+        .key-logo span { color:#2563eb; }
+
+        .key-eyebrow {
+            text-align:center;
+            color:#2563eb;
+            font-size:0.74rem; font-weight:700;
+            letter-spacing:2px; text-transform:uppercase;
+            margin-bottom:0.5rem;
+        }
+
+        .key-headline {
+            text-align:center;
+            font-family:'Outfit',sans-serif;
+            font-weight:900;
+            font-size:clamp(1.6rem, 3vw, 2.1rem);
+            line-height:1.15;
+            color:#0f172a;
+            margin-bottom:0.6rem;
+            letter-spacing:-0.5px;
+        }
+        .key-headline em { font-style:normal; color:#3b82f6; }
+
+        .key-sub {
+            text-align:center;
+            color:#475569;
+            font-size:0.92rem;
+            line-height:1.55;
+            margin-bottom:1.75rem;
+        }
+
+        .key-priceblock {
+            background:rgba(59,130,246,0.08);
+            border:1px solid rgba(59,130,246,0.28);
+            border-radius:16px;
+            padding:1.5rem 1.25rem;
+            text-align:center;
+            margin-bottom:1.5rem;
+            position:relative;
+            overflow:hidden;
+        }
+        .key-priceblock::before {
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%);
+            animation:shine 4s ease-in-out infinite;
+        }
+        .key-tokens {
+            font-family:'JetBrains Mono',monospace;
+            font-size:2.4rem; font-weight:800;
+            color:#1d4ed8; line-height:1;
+            margin-bottom:0.35rem;
+        }
+        .key-tokens-label {
+            font-size:0.72rem; color:#64748b;
+            text-transform:uppercase; letter-spacing:1.5px; font-weight:600;
+        }
+        .key-price {
+            margin-top:1rem;
+            font-family:'Outfit',sans-serif;
+            font-size:1.05rem; color:#334155;
+        }
+        .key-price strong { color:#0f172a; font-size:2rem; font-weight:900; vertical-align:-2px; }
+        .key-price-once { font-size:0.78rem; color:#64748b; }
+
+        .key-features {
+            list-style:none; padding:0; margin:0 0 1.75rem;
+            display:grid; gap:0.6rem;
+        }
+        .key-features li {
+            display:flex; align-items:center; gap:0.6rem;
+            color:#334155; font-size:0.88rem;
+        }
+        .key-features li .dot { color:#22c55e; font-weight:800; }
+
+        .key-buy {
+            width:100%;
+            padding:1rem;
+            background:linear-gradient(135deg, #1d4ed8, #3b82f6);
+            color:white; border:none;
+            border-radius:12px;
+            font-size:1rem; font-weight:700;
+            font-family:'Inter',sans-serif;
+            cursor:pointer;
+            transition:all 0.2s ease;
+            position:relative;
+            overflow:hidden;
+            min-height:52px;
+        }
+        .key-buy::before {
+            content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+            background:linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            animation:shine 3s ease-in-out infinite;
+        }
+        .key-buy:hover { transform:translateY(-2px); box-shadow:0 12px 30px rgba(37,99,235,0.30); }
+        .key-buy:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+
+        .key-note {
+            text-align:center; color:#64748b;
+            font-size:0.78rem; line-height:1.5;
+            margin-top:1rem;
+        }
+        .key-note a { color:#2563eb; text-decoration:none; font-weight:600; }
+
+        /* success / canceled banners */
+        .key-banner {
+            border-radius:12px; padding:1rem 1.1rem;
+            font-size:0.88rem; line-height:1.5;
+            margin-bottom:1.25rem; display:none;
+        }
+        .key-banner.show { display:block; }
+        .key-banner.ok { background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; }
+        .key-banner.err { background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+
+        /* dev reveal */
+        .key-reveal { display:none; margin-top:1rem; }
+        .key-reveal.show { display:block; }
+        .key-reveal-label { font-size:0.78rem; color:#64748b; margin-bottom:0.4rem; }
+        .key-reveal-box {
+            font-family:'JetBrains Mono',monospace;
+            font-size:0.85rem; color:#1e3a8a;
+            background:#eff6ff;
+            border:1px dashed rgba(59,130,246,0.45);
+            padding:0.85rem 1rem; border-radius:10px;
+            word-break:break-all;
+        }
+
+        @keyframes shine { 0%{left:-100%;} 60%,100%{left:100%;} }
+    </style>
+</head>
+<body>
+    <div id="mouse-orb"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="particles" id="particles"></div>
+
+    <div class="key-page">
+        <div class="key-card">
+
+            <a href="/" class="key-logo">
+                <img src="/assets/logo.png" alt="TrueSendy">
+                True<span>Sendy</span>
+            </a>
+            <div class="key-eyebrow">Verification Key</div>
+            <h1 class="key-headline">Verify <em>100,000 emails</em><br>with one key</h1>
+            <p class="key-sub">Buy a key, receive it in your inbox, paste it into the TrueSendy app. No subscription — just clean, deliverable lists.</p>
+
+            <!-- status banners -->
+            <div class="key-banner ok" id="banner-success">
+                ✅ <strong>Payment received!</strong> Your verification key has been sent to your account email. Check your inbox (and spam folder).
+            </div>
+            <div class="key-banner err" id="banner-canceled">
+                Payment canceled. No charge was made — try again whenever you're ready.
+            </div>
+
+            <!-- price block (filled by JS) -->
+            <div class="key-priceblock">
+                <div class="key-tokens" id="kpi-tokens">100,000</div>
+                <div class="key-tokens-label">Email verifications per key</div>
+                <div class="key-price">
+                    <strong>$<span id="kpi-price">49</span></strong>
+                    <div class="key-price-once">one-time payment · key valid <span id="kpi-days">30</span> days</div>
+                </div>
+            </div>
+
+            <!-- features -->
+            <ul class="key-features">
+                <li><span class="dot">✓</span> Hotmail, Outlook, Gmail, corporate & business inboxes</li>
+                <li><span class="dot">✓</span> Real SMTP probing — detects mailboxes that can receive</li>
+                <li><span class="dot">✓</span> Key delivered to your email instantly after payment</li>
+                <li><span class="dot">✓</span> Hard cap: exactly 100,000 checks — never more</li>
+            </ul>
+
+            <button class="key-buy" id="buy-btn" onclick="buyKey()">Buy Key — $<span id="kpi-price-btn">49</span></button>
+
+            <!-- dev-mode key reveal (only shown when server returns devMode) -->
+            <div class="key-reveal" id="key-reveal">
+                <div class="key-reveal-label">Dev mode — your key (also printed to the server console):</div>
+                <div class="key-reveal-box" id="key-reveal-text"></div>
+            </div>
+
+            <div class="key-note">
+                Need the app? <a href="/downloads">Download TrueSendy here</a><br>
+                A valid key is required — the app will not run without one.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ── state ──
+        const token = localStorage.getItem('ts_token') || null;
+        let priceUsd = 49, tokens = 100000, days = 30;
+
+        // ── query-param banners ──
+        const params = new URLSearchParams(location.search);
+        if (params.get('success') === '1') document.getElementById('banner-success').classList.add('show');
+        if (params.get('canceled') === '1') document.getElementById('banner-canceled').classList.add('show');
+        if (params.get('error') === 'no_stripe') {
+            const b = document.getElementById('banner-canceled');
+            b.textContent = 'Card payments are not configured yet. Please contact support.';
+            b.classList.add('show');
+        }
+
+        // ── load price + allowance ──
+        (async () => {
+            try {
+                const r = await fetch('/api/key-price').then(r => r.json());
+                priceUsd = r.priceUsd ?? priceUsd;
+                tokens   = r.tokens ?? tokens;
+                days     = r.validityDays ?? days;
+                document.getElementById('kpi-tokens').textContent    = Number(tokens).toLocaleString();
+                document.getElementById('kpi-price').textContent     = priceUsd;
+                document.getElementById('kpi-price-btn').textContent = priceUsd;
+                document.getElementById('kpi-days').textContent      = days;
+            } catch (_) { /* fall back to defaults shown in HTML */ }
+        })();
+
+        // ── buy ──
+        function buyKey() {
+            // Guest flow: go to /checkout where the buyer enters their email and
+            // pays. No account required — the key is emailed after payment.
+            window.location.href = '/checkout';
+        }
+
+        // ── fluid mouse orb (same as signin.html) ──
+        (function() {
+            const orb = document.getElementById('mouse-orb');
+            if (!orb || window.matchMedia('(hover:none)').matches) return;
+            let cx = window.innerWidth/2, cy = window.innerHeight/2;
+            let tx = cx, ty = cy, entered = false;
+            function tick() {
+                cx += (tx-cx)*0.06; cy += (ty-cy)*0.06;
+                orb.style.transform = `translate(${cx - 200}px, ${cy - 200}px)`;
+                requestAnimationFrame(tick);
+            }
+            document.addEventListener('mousemove', e => {
+                tx = e.clientX; ty = e.clientY;
+                if (!entered) { entered=true; cx=tx; cy=ty; orb.classList.add('visible'); tick(); }
+            }, {passive:true});
+        })();
+
+        // ── particles (same as signin.html) ──
+        (function() {
+            const c = document.getElementById('particles');
+            if (!c) return;
+            for (var i = 0; i < 15; i++) {
+                var p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+                p.style.animationDuration = (12 + Math.random() * 14) + 's';
+                p.style.animationDelay = Math.random() * 16 + 's';
+                p.style.opacity = 0.1 + Math.random() * 0.3;
+                c.appendChild(p);
+            }
+        })();
+    </script>
+</body>
+</html>

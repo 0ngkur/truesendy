@@ -3,89 +3,387 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verifier Pro | Ultimate List Cleaning</title>
-    <meta name="description" content="Clean your email lists instantly with our 99.9% accurate verifier.">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <title>TrueSendy — Verify Emails Before You Send | Cold Email List Cleaning</title>
+    <meta name="description" content="TrueSendy verifies every email on your list before you hit send. Protect your sender reputation, slash bounce rates, and land in inboxes — not spam folders.">
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="background-mesh"></div>
-    <div class="app-container">
-        <header class="glass-header">
-            <div class="logo">Verify<span class="highlight">Pro</span></div>
-            <div class="credits">
-                <span class="credits-label">Daily Credits</span>
-                <span class="credits-value" id="daily-credits">9999999</span>
-            </div>
-        </header>
+    <!-- Mouse-following fluid orb -->
+    <div id="mouse-orb"></div>
 
-        <main class="glass-panel main-panel">
-            <h1>Clean Your List. <br><span class="highlight">Boost Deliverability.</span></h1>
-            <p class="subtitle">Upload your CSV and let our Concurrency Engine do the heavy lifting.</p>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+    <div class="particles" id="particles"></div>
+    <!-- ==================== AUTH MODALS ==================== -->
 
-            <div class="upload-zone" id="upload-zone">
-                <div class="upload-icon">📁</div>
-                <p>Drag & Drop your file here or <strong>Browse</strong><br><small style="opacity:0.6;">Supports: CSV, TXT, Excel, PDF, Word</small></p>
-                <input type="file" id="file-input" accept=".csv,.txt,.xlsx,.xls,.pdf,.docx" hidden>
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="modal-login">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modal-login')">×</button>
+            <h2>Welcome Back</h2>
+            <p class="modal-sub">Log in to your TrueSendy account</p>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-input" id="login-email" placeholder="you@agency.com">
             </div>
-
-            <div class="single-check-zone">
-                <input type="email" id="single-email-input" placeholder="Enter a single email..." class="glass-input" />
-                <button id="single-email-btn" class="glass-btn">Check</button>
-                <div id="single-email-result" style="width: 100%; margin-top: 10px; font-weight: bold; min-height: 24px;"></div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" class="form-input" id="login-password" placeholder="••••••••">
             </div>
-
-            <div class="progress-container" id="progress-container" style="display: none;">
-                <div class="progress-info">
-                    <span id="progress-status">Verifying...</span>
-                    <span id="progress-percentage">0%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
+            <div class="form-error" id="login-error"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:0.5rem" id="login-btn">
+                <span class="btn-shine"></span>Log In
+            </button>
+            <div class="form-footer">
+                <a onclick="showModal('modal-forgot')">Forgot password?</a><br>
+                Don't have an account? <a onclick="showModal('modal-register')">Sign up</a>
             </div>
-
-            <div class="stats-grid" id="stats-grid" style="display: none;">
-                <div class="stat-card">
-                    <h3>Valid</h3>
-                    <div class="stat-value text-success" id="stat-valid">0</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Invalid</h3>
-                    <div class="stat-value text-danger" id="stat-invalid">0</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Catch-all</h3>
-                    <div class="stat-value text-warning" id="stat-catchall">0</div>
-                </div>
-                <div class="stat-card">
-                    <h3>Risky</h3>
-                    <div class="stat-value text-risky" id="stat-risky">0</div>
-                </div>
-            </div>
-
-            <div id="live-feed-section" style="display: none; margin-top: 2rem; display: flex; gap: 1.5rem; justify-content: space-between; text-align: left;">
-                <div class="feed-column" style="flex: 1; background: rgba(16, 185, 129, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                    <h3 class="text-success" style="margin-bottom: 0.5rem; font-size: 1rem;">Live Valid</h3>
-                    <div id="live-valid-list" style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem;"></div>
-                </div>
-                <div class="feed-column" style="flex: 1; background: rgba(239, 68, 68, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                    <h3 class="text-danger" style="margin-bottom: 0.5rem; font-size: 1rem;">Live Invalid</h3>
-                    <div id="live-invalid-list" style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem;"></div>
-                </div>
-            </div>
-
-            <div id="download-section" style="display: none; margin-top: 2rem; text-align: center; gap: 1rem; justify-content: center; align-items: center; flex-direction: column;">
-                <p style="margin-bottom: 0;"><strong>Download Valid Emails As:</strong></p>
-                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <a id="download-btn-csv" class="glass-btn download-btn" href="#" download>⬇ CSV</a>
-                    <a id="download-btn-excel" class="glass-btn download-btn" href="#" download>⬇ Excel</a>
-                    <a id="download-btn-txt" class="glass-btn download-btn" href="#" download>⬇ TXT</a>
-                </div>
-                <button id="reset-btn" class="glass-btn" style="background: rgba(255,255,255,0.1); margin-top: 1rem;">Verify Another List</button>
-            </div>
-        </main>
+        </div>
     </div>
-    <script src="app.js"></script>
+
+    <!-- Register Modal -->
+    <div class="modal-overlay" id="modal-register">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modal-register')">×</button>
+            <h2>Create Account</h2>
+            <p class="modal-sub">Get 5 free email verifications instantly</p>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" class="form-input" id="reg-username" placeholder="youragency">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-input" id="reg-email" placeholder="you@agency.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" class="form-input" id="reg-password" placeholder="Min 6 characters">
+            </div>
+            <div class="form-error" id="reg-error"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:0.5rem" id="reg-btn">
+                <span class="btn-shine"></span>Create Account
+            </button>
+            <div class="form-footer">
+                Already have an account? <a onclick="showModal('modal-login')">Log in</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTP Verify Modal -->
+    <div class="modal-overlay" id="modal-otp">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modal-otp')">×</button>
+            <h2>Verify Your Email</h2>
+            <p class="modal-sub">Enter the 6-digit code sent to <strong id="otp-target-email"></strong></p>
+            <div class="otp-input-group">
+                <input type="text" class="otp-digit" maxlength="1" data-otp="0">
+                <input type="text" class="otp-digit" maxlength="1" data-otp="1">
+                <input type="text" class="otp-digit" maxlength="1" data-otp="2">
+                <input type="text" class="otp-digit" maxlength="1" data-otp="3">
+                <input type="text" class="otp-digit" maxlength="1" data-otp="4">
+                <input type="text" class="otp-digit" maxlength="1" data-otp="5">
+            </div>
+            <div class="form-error" id="otp-error"></div>
+            <button class="btn btn-primary" style="width:100%" id="otp-verify-btn">
+                <span class="btn-shine"></span>Verify
+            </button>
+            <div class="form-footer">
+                Didn't get a code? <a id="resend-otp-btn">Resend</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="modal-forgot">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modal-forgot')">×</button>
+            <h2>Reset Password</h2>
+            <p class="modal-sub">We'll send a code to your email</p>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-input" id="forgot-email" placeholder="you@agency.com">
+            </div>
+            <div class="form-error" id="forgot-error"></div>
+            <div class="form-success" id="forgot-success"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:0.5rem" id="forgot-btn">
+                <span class="btn-shine"></span>Send Reset Code
+            </button>
+            <div class="form-footer">
+                <a onclick="showModal('modal-reset')">Already have a code?</a> · <a onclick="showModal('modal-login')">Back to login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div class="modal-overlay" id="modal-reset">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modal-reset')">×</button>
+            <h2>New Password</h2>
+            <p class="modal-sub">Enter the code from your email and your new password</p>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-input" id="reset-email" placeholder="you@agency.com">
+            </div>
+            <div class="form-group">
+                <label>Reset Code</label>
+                <input type="text" class="form-input" id="reset-otp" placeholder="6-digit code">
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" class="form-input" id="reset-password" placeholder="Min 6 characters">
+            </div>
+            <div class="form-error" id="reset-error"></div>
+            <div class="form-success" id="reset-success"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:0.5rem" id="reset-btn-submit">
+                <span class="btn-shine"></span>Reset Password
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== NAVBAR ==================== -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <img src="/assets/logo.png" alt="TrueSendy" class="logo-icon" style="height:28px;vertical-align:middle">
+                True<span class="logo-accent">Sendy</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="/subscribePlan">Pricing</a>
+                <a href="/downloads">Download</a>
+                <a href="#verify">Verify</a>
+            </div>
+            <div class="nav-actions">
+                <span class="credits-pill" id="credits-pill" style="display:none">
+                    <span class="credits-dot"></span>
+                    Credits: <strong id="daily-credits">0</strong>
+                </span>
+                <a href="/signin" class="nav-auth-btn" id="nav-auth-btn">Log In</a>
+                <button class="nav-auth-btn" id="nav-logout-btn" style="display:none;background:rgba(239,68,68,0.1);color:#dc2626;border:1px solid rgba(239,68,68,0.2);box-shadow:none;" onclick="logout()">Log Out</button>
+            </div>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="/subscribePlan">Pricing</a>
+        <a href="/downloads">Download</a>
+        <a href="#verify">Verify</a>
+        <a href="/signin" style="color:var(--blue-600);font-weight:700">Sign In →</a>
+        <a href="/signup" style="color:var(--blue-600);font-weight:700">Create Free Account →</a>
+    </div>
+
+    <!-- ==================== HERO ==================== -->
+    <section class="hero" id="hero">
+        <div class="hero-content reveal">
+            <div class="hero-badge"><span class="badge-dot"></span>Trusted by 2,400+ Cold Email Agencies</div>
+            <h1>Stop Sending Emails<br>Into the <span class="gradient-text">Void.</span></h1>
+            <p class="hero-sub">TrueSendy verifies every email on your list before you hit send.<br>Protect your sender reputation. Slash bounce rates. Land in inboxes.</p>
+            <div class="hero-cta">
+                <a href="/signup" class="btn btn-primary btn-lg"><span class="btn-shine"></span>Start Free — 5 Checks/Month</a>
+                <a href="#how-it-works" class="btn btn-ghost btn-lg">See How It Works →</a>
+            </div>
+        </div>
+        <div class="trust-bar reveal reveal-delay-1">
+            <div class="trust-item"><div class="trust-number counter" data-target="99.2">0</div><div class="trust-label">% Accuracy</div></div>
+            <div class="trust-divider"></div>
+            <div class="trust-item"><div class="trust-number counter" data-target="847">0</div><div class="trust-label">M Emails Verified</div></div>
+            <div class="trust-divider"></div>
+            <div class="trust-item"><div class="trust-number counter" data-target="2400">0</div><div class="trust-label">+ Agencies Trust Us</div></div>
+            <div class="trust-divider"></div>
+            <div class="trust-item"><div class="trust-number">0.3%</div><div class="trust-label">Avg Bounce Rate</div></div>
+        </div>
+    </section>
+
+    <!-- ==================== PROBLEM/SOLUTION ==================== -->
+    <section class="section problem-section">
+        <div class="container">
+            <div class="split-grid reveal">
+                <div class="problem-card glass-card">
+                    <div class="card-icon card-icon-danger">✕</div>
+                    <h3>Without TrueSendy</h3>
+                    <ul class="check-list danger-list">
+                        <li>Bounce rates above 5% destroy your domain</li>
+                        <li>Emails land in spam — zero replies</li>
+                        <li>Blacklisted IPs tank entire campaigns</li>
+                        <li>Wasted budget on dead addresses</li>
+                        <li>Clients lose trust when campaigns flop</li>
+                    </ul>
+                </div>
+                <div class="solution-card glass-card glow-card">
+                    <div class="card-icon card-icon-success">✓</div>
+                    <h3>With TrueSendy</h3>
+                    <ul class="check-list success-list">
+                        <li>Bounce rates under 1% — guaranteed</li>
+                        <li>Every email hits a real inbox</li>
+                        <li>Sender reputation stays pristine</li>
+                        <li>Zero budget wasted on invalid leads</li>
+                        <li>Clients see results, you keep them</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FEATURES ==================== -->
+    <section class="section" id="features">
+        <div class="container">
+            <div class="section-header reveal"><span class="section-tag">Features</span><h2>Built for Cold Email <span class="gradient-text">Professionals</span></h2><p class="section-desc">Every feature designed to protect your campaigns and maximize deliverability.</p></div>
+            <div class="features-grid">
+                <div class="feature-card glass-card reveal reveal-delay-1"><div class="feature-icon">📦</div><h3>Bulk Verification</h3><p>Upload CSV, TXT, Excel, PDF, or Word files. We extract and verify every email at 20 concurrent checks.</p></div>
+                <div class="feature-card glass-card reveal reveal-delay-2"><div class="feature-icon">🔍</div><h3>Deep SMTP Probing</h3><p>Real RCPT TO handshake with every mail server. No guessing — actual mailbox-level verification.</p></div>
+                <div class="feature-card glass-card reveal reveal-delay-3"><div class="feature-icon">🛡️</div><h3>Anti-Spam Intelligence</h3><p>We distinguish policy rejections from real bounces. Corporate servers that block probes don't get false-flagged.</p></div>
+                <div class="feature-card glass-card reveal"><div class="feature-icon">🌐</div><h3>DNS-over-HTTPS Fallback</h3><p>Works through any firewall. If port 53 is blocked, we resolve MX records via Google DoH.</p></div>
+                <div class="feature-card glass-card reveal reveal-delay-1"><div class="feature-icon">🏢</div><h3>Provider Detection</h3><p>Identifies Google Workspace, Microsoft 365, Proofpoint, and 20+ providers behind any domain.</p></div>
+                <div class="feature-card glass-card reveal reveal-delay-2"><div class="feature-icon">📊</div><h3>Real-Time Dashboard</h3><p>Watch results stream in live. Valid and invalid emails update in real-time.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== HOW IT WORKS ==================== -->
+    <section class="section section-alt" id="how-it-works">
+        <div class="container">
+            <div class="section-header reveal"><span class="section-tag">How It Works</span><h2>Three Steps to a <span class="gradient-text">Clean List</span></h2></div>
+            <div class="steps-grid">
+                <div class="step-card reveal"><div class="step-number">01</div><div class="step-content"><h3>Upload Your List</h3><p>Drag & drop any file — CSV, Excel, TXT, PDF, or Word. We extract every email automatically.</p></div><div class="step-line"></div></div>
+                <div class="step-card reveal reveal-delay-1"><div class="step-number">02</div><div class="step-content"><h3>We Verify Every Email</h3><p>Syntax → DNS/MX → SMTP handshake → Smart classification. 20 emails verified simultaneously.</p></div><div class="step-line"></div></div>
+                <div class="step-card reveal reveal-delay-2"><div class="step-number">03</div><div class="step-content"><h3>Download Clean List</h3><p>Get your verified emails as CSV, Excel, or TXT. Only valid addresses — ready to send.</p></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PRICING ==================== -->
+    <section class="section" id="pricing">
+        <div class="container">
+            <div class="section-header reveal"><span class="section-tag">Pricing</span><h2>Simple, <span class="gradient-text">No BS</span> Pricing</h2><p class="section-desc">Start with 5 free verifications. Upgrade when you need more.</p></div>
+            <div class="pricing-grid">
+                <div class="pricing-card glass-card reveal">
+                    <h3>Starter</h3>
+                    <div class="pricing-price">$19<span>/mo</span></div>
+                    <div class="pricing-credits">1,000 verifications</div>
+                    <ul class="pricing-features">
+                        <li>Bulk upload (CSV, TXT, Excel)</li>
+                        <li>SMTP deep verification</li>
+                        <li>Download clean lists</li>
+                        <li>Email support</li>
+                    </ul>
+                    <button class="btn btn-ghost" style="width:100%" onclick="subscribePlan('starter')">Get Starter</button>
+                </div>
+                <div class="pricing-card glass-card featured reveal reveal-delay-1">
+                    <div class="pricing-badge">Most Popular</div>
+                    <h3>Pro</h3>
+                    <div class="pricing-price">$49<span>/mo</span></div>
+                    <div class="pricing-credits">10,000 verifications</div>
+                    <ul class="pricing-features">
+                        <li>Everything in Starter</li>
+                        <li>PDF & Word file support</li>
+                        <li>Provider detection</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <button class="btn btn-primary" style="width:100%" onclick="subscribePlan('pro')"><span class="btn-shine"></span>Get Pro</button>
+                </div>
+                <div class="pricing-card glass-card reveal reveal-delay-2">
+                    <h3>Agency</h3>
+                    <div class="pricing-price">$149<span>/mo</span></div>
+                    <div class="pricing-credits">100,000 verifications</div>
+                    <ul class="pricing-features">
+                        <li>Everything in Pro</li>
+                        <li>API access</li>
+                        <li>Bulk batch processing</li>
+                        <li>Dedicated support</li>
+                    </ul>
+                    <button class="btn btn-ghost" style="width:100%" onclick="subscribePlan('agency')">Get Agency</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== VERIFICATION TOOL ==================== -->
+    <section class="section section-alt" id="verify">
+        <div class="container">
+            <div class="section-header reveal"><span class="section-tag">Verify Now</span><h2>Clean Your List <span class="gradient-text">Right Now</span></h2></div>
+
+            <div class="tool-panel glass-card glow-card reveal">
+                <!-- Auth gate (shown when not logged in) -->
+                <div class="auth-gate" id="auth-gate">
+                    <h3>Create a Free Account to Start</h3>
+                    <p>Sign up in 30 seconds and get <strong>5 free email verifications</strong> every month. No credit card required.</p>
+                    <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.25rem">
+                        <a href="/signup" class="btn btn-primary btn-lg"><span class="btn-shine"></span>Sign Up Free — 5 Checks/Month</a>
+                        <a href="/signin" class="btn btn-ghost btn-lg">Already have an account? Sign In</a>
+                    </div>
+                </div>
+
+                <!-- Tool content (shown when logged in) -->
+                <div id="tool-content" style="display:none">
+                    <div class="single-check-zone">
+                        <div class="input-group">
+                            <input type="email" id="single-email-input" placeholder="Enter an email to verify..." class="glass-input">
+                            <button id="single-email-btn" class="btn btn-primary"><span class="btn-shine"></span>Verify</button>
+                        </div>
+                        <div id="single-email-result"></div>
+                    </div>
+                    <div class="divider"><span>OR BULK UPLOAD</span></div>
+                    <div class="upload-zone" id="upload-zone">
+                        <div class="upload-icon-wrap"><div class="upload-icon-ring"></div><div class="upload-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div></div>
+                        <p class="upload-text">Drag & drop your file here or <strong>click to browse</strong></p>
+                        <p class="upload-formats">CSV · TXT · Excel · PDF · Word</p>
+                        <input type="file" id="file-input" accept=".csv,.txt,.xlsx,.xls,.pdf,.docx" hidden>
+                    </div>
+                    <div class="progress-container" id="progress-container" style="display:none"><div class="progress-info"><span id="progress-status">Verifying...</span><span id="progress-percentage">0%</span></div><div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div></div>
+                    <div class="stats-grid" id="stats-grid" style="display:none"><div class="stat-card stat-valid"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="stat-valid">0</div><div class="stat-label">Valid</div></div></div><div class="stat-card stat-invalid"><div class="stat-icon">❌</div><div class="stat-info"><div class="stat-value" id="stat-invalid">0</div><div class="stat-label">Invalid</div></div></div></div>
+                    <div id="live-feed-section" style="display:none"><div class="feed-column feed-valid"><h4>Live Valid</h4><div id="live-valid-list"></div></div><div class="feed-column feed-invalid"><h4>Live Invalid</h4><div id="live-invalid-list"></div></div></div>
+                    <div id="download-section" style="display:none"><p class="download-title">Download Your Verified List</p><div class="download-btns"><a id="download-btn-csv" class="btn btn-download" href="#" download>⬇ CSV</a><a id="download-btn-excel" class="btn btn-download" href="#" download>⬇ Excel</a><a id="download-btn-txt" class="btn btn-download" href="#" download>⬇ TXT</a></div><button id="reset-btn" class="btn btn-ghost" style="margin-top:1rem">Verify Another List</button></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TESTIMONIALS ==================== -->
+    <section class="section" id="testimonials">
+        <div class="container">
+            <div class="section-header reveal"><span class="section-tag">Testimonials</span><h2>Agencies <span class="gradient-text">Love Us</span></h2></div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card glass-card reveal"><div class="testimonial-stars">★★★★★</div><p>"Our bounce rate dropped from 8.2% to 0.4% overnight. TrueSendy saved three of our client campaigns."</p><div class="testimonial-author"><div class="author-avatar">JK</div><div><strong>Jake Kensington</strong><span>CEO, ColdReach Agency</span></div></div></div>
+                <div class="testimonial-card glass-card reveal reveal-delay-1"><div class="testimonial-stars">★★★★★</div><p>"We tested 7 tools. TrueSendy was the only one that didn't false-flag our corporate leads. Game changer."</p><div class="testimonial-author"><div class="author-avatar">SM</div><div><strong>Sarah Mitchell</strong><span>Head of Outbound, ScaleUp.io</span></div></div></div>
+                <div class="testimonial-card glass-card reveal reveal-delay-2"><div class="testimonial-stars">★★★★★</div><p>"50K emails in under 15 minutes. We clean every list before loading it into Smartlead."</p><div class="testimonial-author"><div class="author-avatar">RM</div><div><strong>Ryan MacGregor</strong><span>Founder, Outbound Labs</span></div></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== CTA ==================== -->
+    <section class="section cta-section">
+        <div class="container"><div class="cta-card reveal"><h2>Ready to Send With <span class="gradient-text">Confidence?</span></h2><p>Every email you send to a bad address damages your reputation. Stop guessing. Start verifying.</p><a href="#verify" class="btn btn-primary btn-lg"><span class="btn-shine"></span>Verify Your List Now</a></div></div>
+    </section>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand"><div class="nav-logo"><img src="/assets/logo.png" alt="TrueSendy" style="height:28px;vertical-align:middle;margin-right:8px">True<span class="logo-accent">Sendy</span></div><p>The email verification engine built for cold email professionals who can't afford bounces.</p></div>
+                <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#verify">Verify Emails</a><a href="/subscribePlan">Pricing</a><a href="/downloads">Download</a><a href="/agency-api">Agency API</a></div>
+                <div class="footer-col"><h4>Account</h4><a href="/signin">Sign In</a><a href="/signup">Create Account</a><a href="/subscribePlan">Plans</a></div>
+                <div class="footer-col"><h4>Legal</h4><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">GDPR</a></div>
+            </div>
+            <div class="footer-bottom" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+                <p>© 2026 TrueSendy.com — All rights reserved.</p>
+                <span style="display:inline-flex;align-items:center;gap:0.4rem;background:linear-gradient(135deg,var(--blue-50),#eff6ff);border:1px solid var(--blue-100);padding:0.3rem 0.85rem;border-radius:var(--radius-full);font-size:0.78rem;color:var(--blue-700);font-weight:700;letter-spacing:0.3px">
+                    DEV: Ikhtheir Jaman Ongkur
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js?v=4"></script>
 </body>
 </html>

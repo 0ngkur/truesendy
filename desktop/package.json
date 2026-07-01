@@ -1,0 +1,38 @@
+{
+  "name": "truesendy-desktop",
+  "version": "1.0.0",
+  "description": "TrueSendy Email Verifier — Desktop",
+  "main": "main.js",
+  "author": "TrueSendy",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "dependencies": { "xlsx": "^0.18.5" },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.truesendy.app",
+    "productName": "TrueSendy",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["**/*", "!dist/**/*", "!build/**/*"],
+    "asar": false,
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TrueSendy"
+    }
+  }
+}

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Subscribe — TrueSendy</title>
+    <meta name="description" content="Choose your TrueSendy plan and start verifying emails with precision today.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ── Subscribe Page Specific ── */
+        .sub-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: 88px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .sub-header {
+            text-align: center;
+            padding: 3.5rem 2rem 2rem;
+        }
+
+        .sub-header .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            transition: color var(--transition-fast);
+            cursor: pointer;
+        }
+
+        .sub-header .back-link:hover { color: var(--blue-600); }
+
+        .sub-header h1 {
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.75rem;
+        }
+
+        .sub-header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            max-width: 480px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* Billing toggle */
+        .billing-toggle-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .billing-label {
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color var(--transition-fast);
+        }
+
+        .billing-label.active { color: var(--blue-600); font-weight: 700; }
+
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input { display: none; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-subtle);
+            border-radius: var(--radius-full);
+            border: 1.5px solid var(--border-card);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px; height: 20px;
+            left: 3px; top: 50%;
+            transform: translateY(-50%);
+            background: var(--blue-500);
+            border-radius: 50%;
+            transition: all 0.3s var(--ease-spring);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--blue-50);
+            border-color: var(--blue-200);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            left: calc(100% - 23px);
+        }
+
+        .annual-badge {
+            background: var(--success-light);
+            color: var(--success);
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--radius-full);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* Plans grid */
+        .sub-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        .sub-card {
+            background: var(--bg-white);
+            border: 1.5px solid var(--border-card);
+            border-radius: var(--radius-2xl);
+            padding: 2.5rem;
+            position: relative;
+            transition: all var(--transition-smooth);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+        }
+
+        .sub-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--blue-200);
+        }
+
+        .sub-card.featured {
+            border-color: var(--blue-300);
+            box-shadow: var(--shadow-lg), 0 0 60px rgba(59, 130, 246, 0.08);
+        }
+
+        .sub-card.selected {
+            border-color: var(--blue-500);
+            box-shadow: var(--shadow-xl), 0 0 80px rgba(37, 99, 235, 0.12);
+            background: var(--blue-50);
+        }
+
+        .sub-card .plan-badge {
+            position: absolute;
+            top: -13px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+            color: white;
+            padding: 0.3rem 1.1rem;
+            border-radius: var(--radius-full);
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            white-space: nowrap;
+            box-shadow: 0 4px 16px var(--blue-glow);
+        }
+
+        .plan-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .plan-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+            color: var(--text-heading);
+        }
+
+        .plan-tagline {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.3rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .plan-currency {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-heading);
+        }
+
+        .plan-amount {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--text-heading);
+            letter-spacing: -1.5px;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+        }
+
+        .plan-per {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            align-self: flex-end;
+            padding-bottom: 0.2rem;
+        }
+
+        .plan-annual-price {
+            font-size: 0.78rem;
+            color: var(--success);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            min-height: 1.2rem;
+        }
+
+        .plan-credits {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--blue-50);
+            border: 1px solid var(--blue-100);
+            padding: 0.6rem 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--blue-700);
+        }
+
+        .plan-features {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-bottom: 2rem;
+        }
+
+        .plan-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .feat-check {
+            color: var(--success);
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .feat-x {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .plan-features li.disabled { opacity: 0.45; }
+
+        .sub-btn {
+            width: 100%;
+            padding: 0.95rem;
+            border-radius: var(--radius-md);
+            font-size: 0.92rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-family: 'Inter', sans-serif;
+            min-height: 48px;
+        }
+
+        .sub-btn-primary {
+            background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+            color: white;
+            box-shadow: var(--shadow-blue);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sub-btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        .sub-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.3);
+        }
+
+        .sub-btn-outline {
+            background: transparent;
+            color: var(--blue-600);
+            border: 1.5px solid var(--blue-300);
+        }
+
+        .sub-btn-outline:hover {
+            background: var(--blue-50);
+            border-color: var(--blue-500);
+        }
+
+        /* Free tier */
+        .free-tier-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
+        }
+
+        .free-tier-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+            padding: 2rem 2.5rem;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(79, 70, 229, 0.04));
+            border: 1.5px dashed var(--blue-200);
+            border-radius: var(--radius-2xl);
+            flex-wrap: wrap;
+        }
+
+        .free-tier-info h3 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 0.4rem;
+            color: var(--text-heading);
+        }
+
+        .free-tier-info p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .free-pills {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .free-pill {
+            background: var(--blue-50);
+            border: 1px solid var(--blue-100);
+            color: var(--blue-700);
+            padding: 0.3rem 0.8rem;
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* FAQ section */
+        .faq-section {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 2rem 2rem 5rem;
+        }
+
+        .faq-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            color: var(--text-heading);
+        }
+
+        .faq-item {
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .faq-q {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.1rem 0;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--text-heading);
+            gap: 1rem;
+        }
+
+        .faq-chevron {
+            transition: transform 0.3s ease;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+        .faq-a {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+
+        .faq-item.open .faq-a { max-height: 200px; }
+
+        .faq-a-inner { padding-bottom: 1rem; }
+
+        /* Guarantee strip */
+        .guarantee-strip {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+
+        .guarantee-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .guarantee-icon { font-size: 1.1rem; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sub-grid { grid-template-columns: 1fr; max-width: 480px; }
+        }
+
+        @media (max-width: 600px) {
+            .sub-page { padding-top: 72px; }
+            .sub-header { padding: 2rem 1.25rem 1rem; }
+            .sub-grid { padding: 0 1.25rem 3rem; }
+            .free-tier-section, .faq-section, .guarantee-strip { padding-left: 1.25rem; padding-right: 1.25rem; }
+            .free-tier-card { flex-direction: column; align-items: flex-start; }
+            .sub-card { padding: 2rem 1.5rem; }
+            .plan-amount { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mouse orb -->
+    <div id="mouse-orb"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar scrolled" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <img src="/assets/logo.png" alt="TrueSendy" class="logo-icon" style="height:28px;vertical-align:middle">
+                True<span class="logo-accent">Sendy</span>
+            </a>
+            <div class="nav-links">
+                <a href="/#features">Features</a>
+                <a href="/#how-it-works">How It Works</a>
+                <a href="/#pricing">Pricing</a>
+                <a href="/#verify">Verify</a>
+            </div>
+            <div class="nav-actions">
+                <a href="/" class="btn btn-ghost" style="font-size:0.85rem;padding:0.5rem 1.1rem;">← Back to Home</a>
+            </div>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/#features">Features</a>
+        <a href="/#how-it-works">How It Works</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/#verify">Verify</a>
+        <a href="/">← Back to Home</a>
+    </div>
+
+    <div class="sub-page">
+
+        <!-- Header -->
+        <div class="sub-header">
+            <div class="section-tag">💳 Choose Your Plan</div>
+            <h1>Simple, Transparent <span class="gradient-text">Pricing</span></h1>
+            <p>Start free. Scale as you grow. No surprise charges — cancel any time.</p>
+
+            <!-- Billing toggle -->
+            <div class="billing-toggle-wrap">
+                <span class="billing-label active" id="monthly-label">Monthly</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="billing-toggle">
+                    <div class="toggle-slider"></div>
+                </label>
+                <span class="billing-label" id="annual-label">Annual <span class="annual-badge">Save 20%</span></span>
+            </div>
+        </div>
+
+        <!-- Free Tier -->
+        <div class="free-tier-section">
+            <div class="free-tier-card">
+                <div class="free-tier-info">
+                    <h3>🎁 Free Forever — Get Started Today</h3>
+                    <p>No credit card required. Verify up to <strong>50 emails/month</strong> completely free. Upgrade when you're ready.</p>
+                    <div class="free-pills">
+                        <span class="free-pill">✓ 50 verifications/mo</span>
+                        <span class="free-pill">✓ Single email checker</span>
+                        <span class="free-pill">✓ Basic results</span>
+                        <span class="free-pill">✗ No CSV bulk upload</span>
+                        <span class="free-pill">✗ No downloads</span>
+                    </div>
+                </div>
+                <div>
+                    <a href="/" class="btn btn-ghost" style="white-space:nowrap" onclick="triggerRegister()">
+                        Start Free →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plans Grid -->
+        <div class="sub-grid" id="plans-grid">
+
+            <!-- Starter -->
+            <div class="sub-card reveal" id="card-starter" onclick="selectPlan('starter')">
+                <span class="plan-icon">🚀</span>
+                <div class="plan-name">Starter</div>
+                <div class="plan-tagline">Perfect for solo marketers</div>
+                <div class="plan-price-row">
+                    <span class="plan-currency">$</span>
+                    <span class="plan-amount" id="price-starter">19</span>
+                    <span class="plan-per">/mo</span>
+                </div>
+                <div class="plan-annual-price" id="annual-starter"></div>
+                <div class="plan-credits">
+                    📧 <strong id="credits-starter">1,000</strong> verifications/month
+                </div>
+                <ul class="plan-features">
+                    <li><span class="feat-check">✓</span> Bulk upload (CSV, TXT)</li>
+                    <li><span class="feat-check">✓</span> SMTP deep verification</li>
+                    <li><span class="feat-check">✓</span> Download clean lists</li>
+                    <li><span class="feat-check">✓</span> Valid / Invalid split</li>
+                    <li><span class="feat-check">✓</span> Email support</li>
+                    <li class="disabled"><span class="feat-x">✗</span> Provider detection</li>
+                    <li class="disabled"><span class="feat-x">✗</span> API access</li>
+                </ul>
+                <button class="sub-btn sub-btn-outline" id="btn-starter">Get Starter</button>
+            </div>
+
+            <!-- Pro — Featured -->
+            <div class="sub-card featured reveal reveal-delay-1" id="card-pro" onclick="selectPlan('pro')">
+                <div class="plan-badge">🔥 Most Popular</div>
+                <span class="plan-icon">🚀</span>
+                <div class="plan-name">Pro</div>
+                <div class="plan-tagline">For serious cold email teams</div>
+                <div class="plan-price-row">
+                    <span class="plan-currency">$</span>
+                    <span class="plan-amount" id="price-pro">49</span>
+                    <span class="plan-per">/mo</span>
+                </div>
+                <div class="plan-annual-price" id="annual-pro"></div>
+                <div class="plan-credits">
+                    📧 <strong id="credits-pro">10,000</strong> verifications/month
+                </div>
+                <ul class="plan-features">
+                    <li><span class="feat-check">✓</span> Everything in Starter</li>
+                    <li><span class="feat-check">✓</span> Provider detection</li>
+                    <li><span class="feat-check">✓</span> Role account flagging</li>
+                    <li><span class="feat-check">✓</span> Disposable domain detection</li>
+                    <li><span class="feat-check">✓</span> Priority email support</li>
+                    <li><span class="feat-check">✓</span> Live results dashboard</li>
+                    <li class="disabled"><span class="feat-x">✗</span> API access</li>
+                </ul>
+                <button class="sub-btn sub-btn-primary" id="btn-pro">
+                    Get Pro — Most Popular
+                </button>
+            </div>
+
+            <!-- Agency -->
+            <div class="sub-card reveal reveal-delay-2" id="card-agency" onclick="selectPlan('agency')">
+                <span class="plan-icon">🏢</span>
+                <div class="plan-name">Agency</div>
+                <div class="plan-tagline">For high-volume agencies</div>
+                <div class="plan-price-row">
+                    <span class="plan-currency">$</span>
+                    <span class="plan-amount" id="price-agency">149</span>
+                    <span class="plan-per">/mo</span>
+                </div>
+                <div class="plan-annual-price" id="annual-agency"></div>
+                <div class="plan-credits">
+                    📧 <strong id="credits-agency">100,000</strong> verifications/month
+                </div>
+                <ul class="plan-features">
+                    <li><span class="feat-check">✓</span> Everything in Pro</li>
+                    <li><span class="feat-check">✓</span> REST API access</li>
+                    <li><span class="feat-check">✓</span> Bulk batch processing</li>
+                    <li><span class="feat-check">✓</span> Webhook notifications</li>
+                    <li><span class="feat-check">✓</span> Dedicated support</li>
+                    <li><span class="feat-check">✓</span> Custom integrations</li>
+                    <li><span class="feat-check">✓</span> SLA guarantee</li>
+                </ul>
+                <button class="sub-btn sub-btn-outline" id="btn-agency">Get Agency</button>
+            </div>
+
+        </div>
+
+        <!-- Guarantees -->
+        <div class="guarantee-strip">
+            <div class="guarantee-item"><span class="guarantee-icon">🔒</span> SSL encrypted payments</div>
+            <div class="guarantee-item"><span class="guarantee-icon">❌</span> Cancel any time</div>
+            <div class="guarantee-item"><span class="guarantee-icon">💰</span> 7-day money back</div>
+            <div class="guarantee-item"><span class="guarantee-icon">🔄</span> Upgrade / downgrade anytime</div>
+            <div class="guarantee-item"><span class="guarantee-icon">🌍</span> Works globally</div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="faq-section">
+            <div class="faq-title">Frequently Asked Questions</div>
+
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    What counts as one verification? <span class="faq-chevron">▼</span>
+                </div>
+                <div class="faq-a">
+                    <div class="faq-a-inner">Each email address checked counts as one verification — whether it's from a CSV upload or a single check in the tool. Duplicate emails in a batch only count once.</div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    Do unused verifications roll over? <span class="faq-chevron">▼</span>
+                </div>
+                <div class="faq-a">
+                    <div class="faq-a-inner">No — verifications reset at the start of each billing cycle. If you consistently need more, consider upgrading your plan.</div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    How accurate is the verification? <span class="faq-chevron">▼</span>
+                </div>
+                <div class="faq-a">
+                    <div class="faq-a-inner">TrueSendy uses multi-layer verification: syntax check → DNS/MX lookup → DNS-over-HTTPS fallback → SMTP handshake probe. Accuracy is 95–98% on most providers. Some enterprise servers (Google Workspace, Microsoft 365) block SMTP probes, so those return "probable valid" status.</div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    Can I upgrade or cancel anytime? <span class="faq-chevron">▼</span>
+                </div>
+                <div class="faq-a">
+                    <div class="faq-a-inner">Yes — upgrade, downgrade, or cancel from your account settings at any time. No long-term commitments. Cancellations take effect at the end of your current billing period.</div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    Is there a free trial? <span class="faq-chevron">▼</span>
+                </div>
+                <div class="faq-a">
+                    <div class="faq-a-inner">Yes — all new accounts start with 50 free verifications with no credit card required. This gives you a chance to test the accuracy before committing to a paid plan.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ── Pricing data ──
+        const PLANS = {
+            starter: { monthly: 19, annual: 15, credits: '1,000' },
+            pro:     { monthly: 49, annual: 39, credits: '10,000' },
+            agency:  { monthly: 149, annual: 119, credits: '100,000' }
+        };
+
+        let isAnnual = false;
+
+        // ── Read plan from URL ──
+        const urlParams = new URLSearchParams(window.location.search);
+        const preselectedPlan = urlParams.get('plan');
+
+        // ── Billing toggle ──
+        const toggle = document.getElementById('billing-toggle');
+        const monthlyLabel = document.getElementById('monthly-label');
+        const annualLabel = document.getElementById('annual-label');
+
+        toggle.addEventListener('change', () => {
+            isAnnual = toggle.checked;
+            monthlyLabel.classList.toggle('active', !isAnnual);
+            annualLabel.classList.toggle('active', isAnnual);
+            updatePrices();
+        });
+
+        function updatePrices() {
+            Object.keys(PLANS).forEach(plan => {
+                const p = PLANS[plan];
+                document.getElementById(`price-${plan}`).textContent = isAnnual ? p.annual : p.monthly;
+                const annualEl = document.getElementById(`annual-${plan}`);
+                annualEl.textContent = isAnnual
+                    ? `Billed $${p.annual * 12}/year — save $${(p.monthly - p.annual) * 12}`
+                    : '';
+            });
+        }
+
+        // ── Select plan highlight ──
+        function selectPlan(plan) {
+            document.querySelectorAll('.sub-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`card-${plan}`).classList.add('selected');
+            // In a real app: redirect to checkout with plan + billing period
+            const price = isAnnual ? PLANS[plan].annual : PLANS[plan].monthly;
+            const billing = isAnnual ? 'annual' : 'monthly';
+            // For now show a toast — swap with Stripe redirect when ready
+            showToast(`🔒 Redirecting to checkout for ${plan.charAt(0).toUpperCase() + plan.slice(1)} — $${price}/${billing === 'monthly' ? 'mo' : 'yr'}...`);
+        }
+
+        // ── Pre-select from URL param ──
+        if (preselectedPlan && PLANS[preselectedPlan]) {
+            setTimeout(() => {
+                document.getElementById(`card-${preselectedPlan}`)?.classList.add('selected');
+            }, 300);
+        }
+
+        // ── FAQ accordion ──
+        function toggleFaq(el) {
+            const item = el.closest('.faq-item');
+            const wasOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+            if (!wasOpen) item.classList.add('open');
+        }
+
+        // ── Toast notification ──
+        function showToast(msg) {
+            let toast = document.getElementById('sub-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'sub-toast';
+                toast.style.cssText = `
+                    position:fixed;bottom:2rem;right:2rem;z-index:9999;
+                    background:var(--text-heading);color:white;
+                    padding:1rem 1.5rem;border-radius:12px;
+                    font-size:0.88rem;font-weight:500;
+                    box-shadow:0 8px 30px rgba(0,0,0,0.15);
+                    max-width:340px;line-height:1.5;
+                    transform:translateY(20px);opacity:0;
+                    transition:all 0.3s ease;
+                `;
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            requestAnimationFrame(() => {
+                toast.style.transform = 'translateY(0)';
+                toast.style.opacity = '1';
+            });
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => {
+                toast.style.transform = 'translateY(20px)';
+                toast.style.opacity = '0';
+            }, 4000);
+        }
+
+        // ── Trigger register from home page ──
+        function triggerRegister() {
+            window.location.href = '/#verify';
+        }
+
+        // ── Scroll reveal ──
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    observer.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // ── Particles (minimal) ──
+        (function() {
+            const c = document.getElementById('particles');
+            if (!c) return;
+            for (let i = 0; i < 15; i++) {
+                const p = document.createElement('div');
+                p.classList.add('particle');
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (12 + Math.random() * 16) + 's';
+                p.style.animationDelay = (Math.random() * 10) + 's';
+                const s = 1 + Math.random() * 2.5;
+                p.style.width = s + 'px';
+                p.style.height = s + 'px';
+                p.style.opacity = 0.1 + Math.random() * 0.25;
+                c.appendChild(p);
+            }
+        })();
+
+        // ── Fluid mouse orb ──
+        (function() {
+            const orb = document.getElementById('mouse-orb');
+            if (!orb || window.matchMedia('(hover:none)').matches) return;
+            let cx = window.innerWidth/2, cy = window.innerHeight/2;
+            let tx = cx, ty = cy;
+            let entered = false;
+            function tick() {
+                cx += (tx - cx) * 0.06;
+                cy += (ty - cy) * 0.06;
+                orb.style.transform = `translate(${cx - 200}px, ${cy - 200}px)`;
+                requestAnimationFrame(tick);
+            }
+            document.addEventListener('mousemove', e => {
+                tx = e.clientX; ty = e.clientY;
+                if (!entered) { entered = true; cx = tx; cy = ty; orb.classList.add('visible'); tick(); }
+            }, { passive: true });
+            document.addEventListener('mouseleave', () => orb.classList.remove('visible'));
+            document.addEventListener('mouseenter', () => { if (entered) orb.classList.add('visible'); });
+        })();
+
+        // ── Navbar always scrolled ──
+        document.getElementById('navbar').classList.add('scrolled');
+
+        // ── Mobile menu toggle ──
+        const mmBtn = document.getElementById('mobile-menu-btn');
+        const mm = document.getElementById('mobile-menu');
+        if (mmBtn && mm) {
+            mmBtn.addEventListener('click', () => mm.classList.toggle('open'));
+            mm.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mm.classList.remove('open')));
+        }
+    </script>
+</body>
+</html>

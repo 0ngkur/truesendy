@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Checkout — TrueSendy Key</title>
+    <meta name="description" content="Buy a TrueSendy verification key. Enter your email, pay securely, and we'll email your key.">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { margin:0; background:#f8fafc; color:#0f172a; font-family:'Inter',sans-serif; min-height:100vh; overflow-x:hidden; }
+        .co-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2.5rem 1.25rem; position:relative; z-index:2; }
+        .co-card { width:100%; max-width:520px; background:#ffffff; border:1px solid rgba(59,130,246,0.22); border-radius:22px; padding:2.75rem 2.5rem; box-shadow:0 10px 40px rgba(0,0,0,0.08), 0 0 100px rgba(59,130,246,0.10); }
+        .co-logo { display:flex; align-items:center; gap:0.5rem; justify-content:center; font-family:'Outfit',sans-serif; font-weight:900; font-size:1.5rem; color:#0f172a; text-decoration:none; margin-bottom:0.5rem; }
+        .co-logo img { height:30px; vertical-align:middle; }
+        .co-logo span { color:#2563eb; }
+        .co-eyebrow { text-align:center; color:#2563eb; font-size:0.74rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:0.5rem; }
+        .co-headline { text-align:center; font-family:'Outfit',sans-serif; font-weight:900; font-size:clamp(1.6rem,3vw,2.1rem); line-height:1.15; color:#0f172a; margin-bottom:0.6rem; letter-spacing:-0.5px; }
+        .co-sub { text-align:center; color:#475569; font-size:0.92rem; line-height:1.55; margin-bottom:1.75rem; }
+        .co-priceblock { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.28); border-radius:16px; padding:1.4rem 1.25rem; text-align:center; margin-bottom:1.5rem; }
+        .co-tokens { font-family:'JetBrains Mono',monospace; font-size:2.2rem; font-weight:800; color:#1d4ed8; line-height:1; margin-bottom:0.3rem; }
+        .co-tokens-label { font-size:0.72rem; color:#64748b; text-transform:uppercase; letter-spacing:1.5px; font-weight:600; }
+        .co-price { margin-top:0.75rem; font-family:'Outfit',sans-serif; font-size:1.05rem; color:#334155; }
+        .co-price strong { color:#0f172a; font-size:1.9rem; font-weight:900; vertical-align:-2px; }
+        .co-price-once { font-size:0.78rem; color:#64748b; }
+        .co-field { margin-bottom:1rem; }
+        .co-label { display:block; font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:0.4rem; }
+        .co-input { width:100%; padding:0.85rem 1rem; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:'Inter',sans-serif; color:#0f172a; background:#fff; outline:none; transition:border-color 0.2s, box-shadow 0.2s; box-sizing:border-box; }
+        .co-input:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.12); }
+        .co-pay { width:100%; padding:1rem; background:linear-gradient(135deg,#1d4ed8,#3b82f6); color:#fff; border:none; border-radius:12px; font-size:1rem; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.2s; min-height:52px; position:relative; overflow:hidden; }
+        .co-pay::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent); animation:shine 3s ease-in-out infinite; }
+        .co-pay:hover { transform:translateY(-2px); box-shadow:0 12px 30px rgba(37,99,235,0.30); }
+        .co-pay:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+        .co-note { text-align:center; color:#64748b; font-size:0.78rem; line-height:1.5; margin-top:1rem; }
+        .co-note a { color:#2563eb; text-decoration:none; font-weight:600; }
+        .co-banner { border-radius:12px; padding:1rem 1.1rem; font-size:0.88rem; line-height:1.5; margin-bottom:1.25rem; display:none; }
+        .co-banner.show { display:block; }
+        .co-banner.ok { background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; }
+        .co-banner.err { background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+        .co-back { display:flex; align-items:center; gap:0.4rem; color:#64748b; font-size:0.82rem; text-decoration:none; margin-bottom:1.25rem; }
+        .co-back:hover { color:#2563eb; }
+        @keyframes shine { 0%{left:-100%;} 60%,100%{left:100%;} }
+    </style>
+</head>
+<body>
+    <div id="mouse-orb"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="particles" id="particles"></div>
+
+    <div class="co-page">
+        <div class="co-card">
+            <a href="/" class="co-logo"><img src="/assets/logo.png" alt="TrueSendy"> True<span>Sendy</span></a>
+            <div class="co-eyebrow">Secure Checkout</div>
+            <h1 class="co-headline">Get your verification key</h1>
+            <p class="co-sub">Enter the email where we should send your key, then pay securely. No account needed — your key works in the TrueSendy app right away.</p>
+
+            <div class="co-banner ok" id="banner-success">
+                ✅ <strong>Payment received!</strong> Your verification key has been sent to <span id="banner-email">your email</span> (check inbox + spam). It's also saved to an account for this email — <a href="/signup" style="color:#1d4ed8;font-weight:600">sign up</a> anytime to view your key and balance.
+            </div>
+            <div class="co-banner err" id="banner-canceled">Payment canceled — no charge was made. Try again whenever you're ready.</div>
+            <div class="co-banner err" id="banner-error"></div>
+
+            <div class="co-priceblock">
+                <div class="co-tokens" id="co-tokens">100,000</div>
+                <div class="co-tokens-label">Email verifications per key</div>
+                <div class="co-price"><strong>$<span id="co-price">49</span></strong><div class="co-price-once">one-time payment · key valid <span id="co-days">30</span> days</div></div>
+            </div>
+
+            <div class="co-field">
+                <label class="co-label" for="email">Email address (where we send your key)</label>
+                <input class="co-input" type="email" id="email" placeholder="you@company.com" autocomplete="email" required>
+            </div>
+
+            <button class="co-pay" id="pay-btn" onclick="startCheckout()">Pay $<span id="co-price-btn">49</span> &amp; Get Key</button>
+
+            <div class="co-note">🔒 Secure card payment via Stripe. A valid key is required to run the bot — it will not work without one.</div>
+            <div class="co-note"><a href="/key">← back to key details</a></div>
+        </div>
+    </div>
+
+    <script>
+        let priceUsd = 49, tokens = 100000, days = 30;
+        const params = new URLSearchParams(location.search);
+
+        // success / canceled banners
+        if (params.get('success') === '1') {
+            document.getElementById('banner-success').classList.add('show');
+            const e = params.get('email');
+            if (e) document.getElementById('banner-email').textContent = decodeURIComponent(e);
+            document.getElementById('pay-btn').style.display = 'none';
+        }
+        if (params.get('canceled') === '1') document.getElementById('banner-canceled').classList.add('show');
+
+        // load price + allowance from the boss-configured key product
+        (async () => {
+            try {
+                const r = await fetch('/api/key-price').then(r => r.json());
+                priceUsd = r.priceUsd ?? priceUsd; tokens = r.tokens ?? tokens; days = r.validityDays ?? days;
+                document.getElementById('co-tokens').textContent = Number(tokens).toLocaleString();
+                document.getElementById('co-price').textContent = priceUsd;
+                document.getElementById('co-price-btn').textContent = priceUsd;
+                document.getElementById('co-days').textContent = days;
+            } catch (_) {}
+        })();
+
+        async function startCheckout() {
+            const email = document.getElementById('email').value.trim();
+            const errBox = document.getElementById('banner-error');
+            errBox.classList.remove('show');
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errBox.textContent = 'Please enter a valid email address.';
+                errBox.classList.add('show'); return;
+            }
+            const btn = document.getElementById('pay-btn');
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.textContent = 'Redirecting to secure checkout…';
+            try {
+                const r = await fetch('/api/keys/guest-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                }).then(r => r.json());
+                if (r.error) { errBox.textContent = r.error; errBox.classList.add('show'); btn.disabled = false; btn.innerHTML = original; return; }
+                if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return; }   // → Stripe
+                if (r.devMode) {
+                    // local dev: key created + emailed (printed to server console)
+                    const ok = document.getElementById('banner-success');
+                    ok.innerHTML = '✅ <strong>Dev mode</strong> — key created and emailed to <strong>' + email + '</strong> (printed to the server console).';
+                    ok.classList.add('show');
+                    btn.textContent = '✓ Key created (dev)';
+                }
+            } catch (e) {
+                errBox.textContent = 'Could not reach the server. Please try again.';
+                errBox.classList.add('show'); btn.disabled = false; btn.innerHTML = original;
+            }
+        }
+
+        // fluid mouse orb + particles (same as the rest of the site)
+        (function(){const o=document.getElementById('mouse-orb');if(!o||window.matchMedia('(hover:none)').matches)return;let cx=innerWidth/2,cy=innerHeight/2,tx=cx,ty=cy,en=false;(function t(){cx+=(tx-cx)*0.06;cy+=(ty-cy)*0.06;o.style.transform=`translate(${cx-200}px,${cy-200}px)`;requestAnimationFrame(t)})();addEventListener('mousemove',e=>{tx=e.clientX;ty=e.clientY;if(!en){en=true;cx=tx;cy=ty;o.classList.add('visible');(function(){})()}},{passive:true});})();
+        (function(){const c=document.getElementById('particles');if(!c)return;for(let i=0;i<15;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.width=p.style.height=(1+Math.random()*3)+'px';p.style.animationDuration=(12+Math.random()*14)+'s';p.style.animationDelay=Math.random()*16+'s';p.style.opacity=0.1+Math.random()*0.3;c.appendChild(p);}})();
+    </script>
+</body>
+</html>

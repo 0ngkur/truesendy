@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TrueSendy Agency — API & Desktop App</title>
+    <meta name="description" content="Integrate TrueSendy into your workflow. REST API and Windows desktop app for email verification. 100,000 credits per API key.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        .api-page { padding-top: 88px; min-height: 100vh; position: relative; z-index: 2; }
+        .api-hero { text-align: center; padding: 3.5rem 2rem 2.5rem; }
+        .api-hero h1 { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 1rem; }
+        .api-hero p { color: var(--text-secondary); font-size: 1rem; max-width: 560px; margin: 0 auto 2rem; line-height: 1.7; }
+        .api-hero .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; margin-bottom: 1.5rem; transition: color 0.2s; cursor: pointer; text-decoration: none; }
+        .api-hero .back-link:hover { color: var(--blue-600); }
+        .api-hero .hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+        .api-container { max-width: 900px; margin: 0 auto; padding: 0 2rem 4rem; width: 100%; }
+
+        .api-card {
+            background: var(--bg-card); border: 1px solid var(--border-card);
+            border-radius: var(--radius-xl); padding: 2rem; margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm); transition: all var(--transition-smooth);
+        }
+        .api-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+        .api-card h3 { color: var(--text-heading); font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+        .api-card p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1rem; }
+
+        .endpoint {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.3rem 0.9rem; border-radius: var(--radius-full);
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; margin-bottom: 0.75rem;
+        }
+        .endpoint-get { background: var(--success-light); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
+        .endpoint-post { background: var(--blue-50); color: var(--blue-700); border: 1px solid var(--blue-100); }
+
+        .code-block {
+            background: #0f172a; color: #e2e8f0; border-radius: var(--radius-md);
+            padding: 1.25rem; font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 0.8rem; line-height: 1.7; overflow-x: auto; position: relative;
+            margin: 0.75rem 0;
+        }
+        .code-block .code-label {
+            display: block; font-size: 0.7rem; font-weight: 700; color: #64748b;
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;
+        }
+        .code-block code { display: block; }
+
+        .dl-section {
+            display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+            padding: 2rem; background: var(--blue-50); border: 1px solid var(--blue-100);
+            border-radius: var(--radius-xl); margin-bottom: 1.5rem;
+        }
+        .dl-section > div:first-child { flex: 1; min-width: 250px; }
+        .dl-section h3 { color: var(--text-heading); font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .dl-section p { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin-bottom: 0.75rem; }
+
+        .specs-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .spec-pill {
+            background: white; border: 1px solid var(--blue-100); padding: 0.3rem 0.8rem;
+            border-radius: var(--radius-full); font-size: 0.75rem; color: var(--blue-700); font-weight: 600;
+        }
+
+        .status-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .status-table th { text-align: left; padding: 0.6rem 0.75rem; color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border-card); }
+        .status-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border-light); color: var(--text-secondary); }
+        .status-table code { background: var(--blue-50); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--blue-700); }
+
+        @media (max-width: 768px) {
+            .api-hero { padding: 2.5rem 1.5rem 2rem; }
+            .api-card { padding: 1.5rem; }
+            .code-block { font-size: 0.72rem; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="mouse-orb"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar scrolled" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <img src="/assets/logo.png" alt="TrueSendy" class="logo-icon" style="height:28px;vertical-align:middle">
+                True<span class="logo-accent">Sendy</span>
+            </a>
+            <div class="nav-links">
+                <a href="/#features">Features</a>
+                <a href="/#how-it-works">How It Works</a>
+                <a href="/subscribePlan">Pricing</a>
+                <a href="/downloads">Download</a>
+                <a href="/#verify">Verify</a>
+            </div>
+            <div class="nav-actions">
+                <a href="/signin" class="nav-auth-btn">Log In</a>
+            </div>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/#features">Features</a>
+        <a href="/#how-it-works">How It Works</a>
+        <a href="/subscribePlan">Pricing</a>
+        <a href="/downloads">Download</a>
+        <a href="/#verify">Verify</a>
+        <a href="/signin">Log In</a>
+    </div>
+
+    <div class="api-page">
+        <!-- HERO -->
+        <div class="api-hero reveal">
+            <a href="/" class="back-link">← Back to Home</a>
+            <span class="section-tag" style="margin-bottom:1rem;">Agency Plan</span>
+            <h1>API & <span class="gradient-text">Desktop App</span></h1>
+            <p>Integrate TrueSendy into your workflow. Use our REST API or the Windows desktop app. Requires an Agency Plan API key. 1 key = 100,000 verifications.</p>
+            <div class="hero-cta">
+                <a href="/subscribePlan?plan=agency" class="btn btn-primary btn-lg"><span class="btn-shine"></span>Get Agency Plan — $149/mo</a>
+                <a href="/downloads" class="btn btn-ghost btn-lg">Download Desktop App</a>
+            </div>
+        </div>
+
+        <div class="api-container">
+            <!-- DOWNLOAD SECTION -->
+            <div class="dl-section reveal reveal-delay-1">
+                <div>
+                    <h3>TrueSendy Desktop App</h3>
+                    <p>Windows installer — double-click to install. Activate with your API key and verify emails right from your desktop.</p>
+                    <div class="specs-row">
+                        <span class="spec-pill">🖥️ Windows 10/11</span>
+                        <span class="spec-pill">📦 ~100 MB</span>
+                        <span class="spec-pill">🔑 API Key Required</span>
+                    </div>
+                </div>
+                <a href="/downloads/TrueSendy-Setup.exe" class="btn btn-primary">Download Installer</a>
+            </div>
+
+            <!-- AUTH -->
+            <div class="api-card reveal" id="api-reference">
+                <h3>Authentication</h3>
+                <p>All API requests require an API key passed in the <code style="background:var(--blue-50);padding:0.15rem 0.5rem;border-radius:4px;color:var(--blue-700);">X-API-Key</code> header. Keys are generated from your account dashboard and start with <code style="background:var(--blue-50);padding:0.15rem 0.5rem;border-radius:4px;color:var(--blue-700);">ts_</code>.</p>
+                <p style="font-size:0.82rem;color:var(--text-muted);">Rate limit: 120 requests/minute per API key. Max 500 emails per bulk request.</p>
+            </div>
+
+            <!-- BALANCE -->
+            <div class="api-card reveal reveal-delay-1">
+                <span class="endpoint endpoint-get">GET</span>
+                <h3>/api/v1/balance</h3>
+                <p>Check your API key balance — remaining tokens, tokens used, and expiry.</p>
+                <div class="code-block">
+                    <span class="code-label">cURL</span>
+                    <code>curl -H "X-API-Key: ts_your_key" https://truesendy.com/api/v1/balance</code>
+                </div>
+            </div>
+
+            <!-- VERIFY SINGLE -->
+            <div class="api-card reveal reveal-delay-2">
+                <span class="endpoint endpoint-post">POST</span>
+                <h3>/api/v1/verify</h3>
+                <p>Verify a single email address. Deducts 1 token.</p>
+                <div class="code-block">
+                    <span class="code-label">cURL</span>
+                    <code>curl -X POST -H "X-API-Key: ts_your_key" -H "Content-Type: application/json" -d '{"email":"user@example.com"}' https://truesendy.com/api/v1/verify</code>
+                </div>
+            </div>
+
+            <!-- VERIFY BULK -->
+            <div class="api-card reveal">
+                <span class="endpoint endpoint-post">POST</span>
+                <h3>/api/v1/verify-bulk</h3>
+                <p>Verify up to 500 emails in a single request. Tokens are deducted upfront.</p>
+                <div class="code-block">
+                    <span class="code-label">cURL</span>
+                    <code>curl -X POST -H "X-API-Key: ts_your_key" -H "Content-Type: application/json" -d '{"emails":["a@x.com","b@y.com"]}' https://truesendy.com/api/v1/verify-bulk</code>
+                </div>
+            </div>
+
+            <!-- STATUS CODES -->
+            <div class="api-card reveal reveal-delay-1">
+                <h3>Response Status Codes</h3>
+                <table class="status-table">
+                    <thead><tr><th>Status</th><th>Reason Code</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td style="color:var(--success);font-weight:700">valid</td><td><code>smtp_accepted</code></td><td>Mailbox confirmed — safe to send</td></tr>
+                        <tr><td style="color:var(--success);font-weight:700">valid</td><td><code>policy_rejection</code></td><td>Server blocked probe, mailbox likely valid</td></tr>
+                        <tr><td style="color:var(--success);font-weight:700">valid</td><td><code>catch_all_domain</code></td><td>Domain accepts all — unverifiable but deliverable</td></tr>
+                        <tr><td style="color:var(--danger);font-weight:700">invalid</td><td><code>mailbox_not_found</code></td><td>Server confirmed mailbox does not exist</td></tr>
+                        <tr><td style="color:var(--danger);font-weight:700">invalid</td><td><code>no_mx_record</code></td><td>Domain has no mail server</td></tr>
+                        <tr><td style="color:var(--danger);font-weight:700">invalid</td><td><code>disposable_domain</code></td><td>Temporary/throwaway email provider</td></tr>
+                        <tr><td style="color:var(--text-muted);font-weight:700">error</td><td><code>smtp_timeout</code></td><td>Server did not respond in time</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer" style="z-index:2;position:relative;">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="nav-logo"><img src="/assets/logo.png" alt="TrueSendy" style="height:28px;vertical-align:middle;margin-right:8px">True<span class="logo-accent">Sendy</span></div>
+                    <p>The email verification engine built for cold email professionals who can't afford bounces.</p>
+                </div>
+                <div class="footer-col"><h4>Product</h4><a href="/#features">Features</a><a href="/#verify">Verify Emails</a><a href="/subscribePlan">Pricing</a><a href="/downloads">Download</a></div>
+                <div class="footer-col"><h4>Account</h4><a href="/signin">Sign In</a><a href="/signup">Create Account</a><a href="/subscribePlan">Plans</a></div>
+                <div class="footer-col"><h4>Legal</h4><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">GDPR</a></div>
+            </div>
+            <div class="footer-bottom" style="text-align:center;padding-top:2rem;border-top:1px solid var(--border-light);">
+                <p style="color:var(--text-muted);font-size:0.8rem;">© 2026 TrueSendy.com — All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ── Fluid mouse orb ──
+        (function() {
+            const orb = document.getElementById('mouse-orb');
+            if (!orb || window.matchMedia('(hover:none)').matches) return;
+            let cx = window.innerWidth/2, cy = window.innerHeight/2;
+            let tx = cx, ty = cy;
+            let entered = false;
+            function tick() {
+                cx += (tx - cx) * 0.06;
+                cy += (ty - cy) * 0.06;
+                orb.style.transform = `translate(${cx - 200}px, ${cy - 200}px)`;
+                requestAnimationFrame(tick);
+            }
+            document.addEventListener('mousemove', e => {
+                tx = e.clientX; ty = e.clientY;
+                if (!entered) { entered = true; cx = tx; cy = ty; orb.classList.add('visible'); tick(); }
+            }, { passive: true });
+            document.addEventListener('mouseleave', () => orb.classList.remove('visible'));
+            document.addEventListener('mouseenter', () => { if (entered) orb.classList.add('visible'); });
+        })();
+
+        // ── Particles ──
+        (function() {
+            const c = document.getElementById('particles');
+            if (!c) return;
+            for (var i = 0; i < 15; i++) {
+                var p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+                p.style.animationDuration = (12 + Math.random() * 14) + 's';
+                p.style.animationDelay = Math.random() * 16 + 's';
+                p.style.opacity = 0.1 + Math.random() * 0.3;
+                c.appendChild(p);
+            }
+        })();
+
+        // ── Mobile menu ──
+        (function() {
+            const b = document.getElementById('mobile-menu-btn');
+            const m = document.getElementById('mobile-menu');
+            if (b && m) {
+                b.addEventListener('click', () => m.classList.toggle('open'));
+                m.querySelectorAll('a').forEach(a => a.addEventListener('click', () => m.classList.remove('open')));
+            }
+        })();
+
+        // ── Scroll reveals ──
+        (function() {
+            document.body.classList.add('js-loaded');
+            const o = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); o.unobserve(e.target); } });
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+            document.querySelectorAll('.reveal').forEach(el => o.observe(el));
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel — TrueSendy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        :root {
+            --bg: #0b0f1a;
+            --bg-card: #111827;
+            --bg-card-hover: #1a2236;
+            --bg-sidebar: #0d1117;
+            --border: #1e293b;
+            --border-light: #2d3a4f;
+            --text: #e2e8f0;
+            --text-dim: #6b7fa8;
+            --text-muted: #6b7fa8;
+            --white: #f8fafc;
+            --blue: #3b82f6;
+            --blue-dim: rgba(59,130,246,0.15);
+            --blue-glow: rgba(59,130,246,0.25);
+            --green: #22c55e;
+            --green-dim: rgba(34,197,94,0.15);
+            --red: #ef4444;
+            --red-dim: rgba(239,68,68,0.15);
+            --amber: #f59e0b;
+            --amber-dim: rgba(245,158,11,0.15);
+            --purple: #a855f7;
+            --purple-dim: rgba(168,85,247,0.15);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── LOGIN SCREEN ── */
+        .login-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at 50% 30%, rgba(59,130,246,0.08) 0%, transparent 60%), var(--bg);
+        }
+
+        .login-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow), 0 0 80px rgba(59,130,246,0.06);
+        }
+
+        .login-logo {
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 900;
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 0.5rem;
+            color: var(--white);
+        }
+
+        .login-logo span { color: var(--blue); }
+
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            margin-bottom: 2rem;
+        }
+
+        .login-badge {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-badge span {
+            background: var(--red-dim);
+            color: var(--red);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.25rem 0.8rem;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .form-field {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px var(--blue-dim);
+        }
+
+        .form-input::placeholder { color: var(--text-muted); }
+
+        .login-btn {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .login-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--blue-glow); }
+        .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .login-error {
+            color: var(--red);
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 0.75rem;
+            min-height: 1.2em;
+        }
+
+        /* ── ADMIN LAYOUT ── */
+        .admin-layout {
+            display: none;
+            grid-template-columns: 260px 1fr;
+            min-height: 100vh;
+        }
+
+        .admin-layout.active {
+            display: grid;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-logo {
+            padding: 0 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 900;
+            font-family: 'Outfit', sans-serif;
+            color: var(--white);
+            margin-bottom: 0.3rem;
+        }
+
+        .sidebar-logo span { color: var(--blue); }
+
+        .sidebar-role {
+            padding: 0 1.5rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2rem;
+        }
+
+        .role-master { color: var(--amber); }
+        .role-subadmin { color: var(--purple); }
+
+        .sidebar-section {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            padding: 0.75rem 1.5rem 0.5rem;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1.5rem;
+            color: var(--text-dim);
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            color: var(--white);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .sidebar-link.active {
+            color: var(--blue);
+            background: var(--blue-dim);
+            border-left-color: var(--blue);
+            font-weight: 600;
+        }
+
+        .sidebar-link .link-icon { font-size: 1.1rem; width: 22px; text-align: center; }
+
+        .sidebar-spacer { flex: 1; }
+
+        .sidebar-logout {
+            margin: 0 1rem;
+            padding: 0.7rem 1rem;
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sidebar-logout:hover { background: rgba(239,68,68,0.25); }
+
+        /* Main content */
+        .main {
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .main-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .main-title .title-dim { color: var(--text-muted); font-weight: 400; }
+
+        .header-actions { display: flex; gap: 0.75rem; }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+        }
+
+        .btn-blue { background: var(--blue); color: white; }
+        .btn-blue:hover { background: #2563eb; }
+        .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+        .btn-ghost:hover { border-color: var(--text-dim); color: var(--white); }
+        .btn-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+        .btn-red:hover { background: rgba(239,68,68,0.25); }
+        .btn-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+        .btn-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+        .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.75rem; }
+
+        /* ── STATS CARDS ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover { border-color: var(--border-light); background: var(--bg-card-hover); }
+
+        .stat-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--white);
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        /* ── TABLE ── */
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0 1rem;
+            flex: 1;
+            max-width: 360px;
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 0.85rem;
+            padding: 0.65rem 0;
+            outline: none;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .search-box input::placeholder { color: var(--text-muted); }
+
+        .filter-pills {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-pill {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-dim);
+            transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .filter-pill.active { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.3); }
+        .filter-pill:hover { border-color: var(--text-muted); }
+
+        .table-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow-x: auto;            /* horizontal scroll on narrow screens */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        th:hover { color: var(--text-dim); }
+
+        td {
+            padding: 0.7rem 1rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        tr:last-child td { border-bottom: none; }
+
+        .user-email {
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        .user-username {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-free { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+        .badge-starter { background: var(--blue-dim); color: var(--blue); }
+        .badge-pro { background: var(--purple-dim); color: var(--purple); }
+        .badge-agency { background: var(--amber-dim); color: var(--amber); }
+        .badge-admin { background: var(--green-dim); color: var(--green); }
+        .badge-verified { background: var(--green-dim); color: var(--green); }
+        .badge-unverified { background: var(--red-dim); color: var(--red); }
+        .badge-banned { background: var(--red); color: white; }
+        .badge-subadmin { background: var(--purple-dim); color: var(--purple); }
+
+        .credit-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+        }
+
+        .table-empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .table-count {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border);
+            background: rgba(0,0,0,0.1);
+        }
+
+        /* ── PANELS (sections) ── */
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 1.25rem;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.25rem;
+        }
+
+        /* ── INLINE EDIT ── */
+        .inline-edit {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .inline-edit input {
+            width: 70px;
+            padding: 0.25rem 0.4rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            outline: none;
+        }
+
+        .inline-edit input:focus { border-color: var(--blue); }
+
+        .inline-edit select {
+            padding: 0.25rem 0.4rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-size: 0.78rem;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .inline-edit select:focus { border-color: var(--blue); }
+
+        /* ── TOAST ── */
+        #admin-toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.85rem 1.25rem;
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            max-width: 340px;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        #admin-toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+        /* ── RESPONSIVE ── */
+        /* Mobile top bar (hamburger) — hidden on desktop */
+        #mobile-topbar { display: none; align-items: center; justify-content: space-between; gap: 0.75rem; margin: -1rem -1.25rem 1.25rem; padding: 0.7rem 1rem; background: var(--bg-sidebar); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+        #mobile-topbar button { background: transparent; color: var(--text); border: 1px solid var(--border); padding: 0.4rem 0.65rem; border-radius: var(--radius-sm); font-size: 1.02rem; cursor: pointer; }
+        #mobile-topbar .mt-title { font-family: 'Outfit',sans-serif; font-weight: 700; color: var(--white); font-size: 0.92rem; }
+
+        @media (max-width: 900px) {
+            .admin-layout { grid-template-columns: 1fr; }
+            #mobile-topbar { display: flex; }
+            .sidebar {
+                position: fixed;
+                left: -300px;
+                top: 0;
+                width: 260px;
+                height: 100vh;
+                z-index: 100;
+                transition: left 0.3s ease;
+                box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+            }
+            .sidebar.mobile-open { left: 0; }
+            .main { max-height: none; padding: 1.25rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .table-toolbar { flex-direction: column; align-items: stretch; }
+            .search-box { max-width: none; }
+            .modal { max-width: calc(100vw - 2rem); padding: 1.5rem; }
+            .form-input, .inline-edit input, .inline-edit select { font-size: 16px; }   /* prevents iOS auto-zoom */
+            .main-header { flex-wrap: wrap; gap: 0.75rem; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+
+        @keyframes orb-breathe { 0%,100% { transform: scale(1); opacity:0.6; } 50% { transform: scale(1.15); opacity:1; } }
+        @keyframes dot-breathe { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    </style>
+</head>
+<body>
+
+    <!-- ════════ LOGIN SCREEN ════════ -->
+    <div class="login-screen" id="login-screen">
+        <div class="login-box">
+            <div class="login-logo"><img src="/assets/logo.png" alt="TrueSendy" style="height:36px;vertical-align:middle;margin-right:4px"> True<span>Sendy</span></div>
+            <div class="login-badge"><span>🔒 Admin Access Only</span></div>
+            <div class="login-subtitle">Master Control Panel</div>
+
+            <div class="form-field">
+                <label class="form-label">Username</label>
+                <input class="form-input" type="text" id="admin-user" placeholder="Admin username" autocomplete="off">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Password</label>
+                <input class="form-input" type="password" id="admin-pass" placeholder="••••••••">
+            </div>
+            <button class="login-btn" id="admin-login-btn" onclick="doAdminLogin()">Access Panel →</button>
+            <div class="login-error" id="admin-login-error"></div>
+        </div>
+    </div>
+
+    <!-- ════════ ADMIN LAYOUT ════════ -->
+    <div class="admin-layout" id="admin-layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo"><img src="/assets/logo.png" alt="TrueSendy" style="height:28px;vertical-align:middle;margin-right:4px"> True<span>Sendy</span></div>
+            <div class="sidebar-role" id="sidebar-role">Master Admin</div>
+
+            <div class="sidebar-section">Overview</div>
+            <div class="sidebar-link active" onclick="showPanel('dashboard')" data-panel="dashboard">
+                <span class="link-icon">📊</span> Dashboard
+            </div>
+
+            <div class="sidebar-section">Management</div>
+            <div class="sidebar-link" onclick="showPanel('users')" data-panel="users">
+                <span class="link-icon">👥</span> All Users
+            </div>
+            <div class="sidebar-link" onclick="showPanel('subadmins')" data-panel="subadmins" id="link-subadmins">
+                <span class="link-icon">🛡️</span> Sub-Admins
+            </div>
+
+            <div class="sidebar-section">Billing</div>
+            <div class="sidebar-link" onclick="showPanel('pricing'); loadPricing()" data-panel="pricing" id="link-pricing">
+                <span class="link-icon">💲</span> Pricing
+            </div>
+            <div class="sidebar-link" onclick="showPanel('payment'); loadPaymentSettings()" data-panel="payment" id="link-payment">
+                <span class="link-icon">💳</span> Payment Settings
+            </div>
+
+            <div class="sidebar-section">Quick Actions</div>
+            <div class="sidebar-link" onclick="refreshData()">
+                <span class="link-icon">🔄</span> Refresh Data
+            </div>
+            <div class="sidebar-link" onclick="window.open('/', '_blank')">
+                <span class="link-icon">🌐</span> View Site
+            </div>
+
+            <div class="sidebar-spacer"></div>
+            <button class="sidebar-logout" onclick="adminLogout()">🚪 Log Out</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main" id="main-content">
+
+            <!-- Mobile top bar (hamburger) — shown only on phones/tablets -->
+            <div id="mobile-topbar">
+                <button id="mobile-menu-btn" aria-label="Menu">☰</button>
+                <span class="mt-title">TrueSendy Admin</span>
+                <button onclick="adminLogout()" aria-label="Logout">🚪</button>
+            </div>
+
+            <!-- ── DASHBOARD PANEL ── -->
+            <div class="panel active" id="panel-dashboard">
+                <div class="main-header">
+                    <div class="main-title">Dashboard <span class="title-dim">/ Overview</span></div>
+                    <div class="header-actions">
+                        <button class="btn btn-ghost" onclick="refreshData()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid" id="stats-grid">
+                    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="st-total">0</div><div class="stat-label">Total Users</div></div>
+                    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="st-verified">0</div><div class="stat-label">Verified Users</div></div>
+                    <div class="stat-card"><div class="stat-icon">🆓</div><div class="stat-value" id="st-free">0</div><div class="stat-label">Free Plan</div></div>
+                    <div class="stat-card"><div class="stat-icon">🚀</div><div class="stat-value" id="st-starter">0</div><div class="stat-label">Starter Plan</div></div>
+                    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value" id="st-pro">0</div><div class="stat-label">Pro Plan</div></div>
+                    <div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-value" id="st-agency">0</div><div class="stat-label">Agency Plan</div></div>
+                    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="st-credits">0</div><div class="stat-label">Total Credits Issued</div></div>
+                    <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-value" id="st-tokens-used">0</div><div class="stat-label">Tokens Used (all-time)</div></div>
+                    <div class="stat-card"><div class="stat-icon">📥</div><div class="stat-value" id="st-bot-downloads">0</div><div class="stat-label">Bot Downloads</div></div>
+                    <div class="stat-card"><div class="stat-icon">🤖</div><div class="stat-value" id="st-active-bot">0</div><div class="stat-label">Active Bot Users</div></div>
+                    <div class="stat-card"><div class="stat-icon">🛡️</div><div class="stat-value" id="st-subadmins">0</div><div class="stat-label">Sub-Admins</div></div>
+                </div>
+
+                <!-- Recent users preview -->
+                <div class="main-title" style="font-size:1.1rem;margin-bottom:1rem">Recent Users</div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>User</th><th>Plan</th><th>Credits</th><th>Status</th><th>Joined</th></tr>
+                        </thead>
+                        <tbody id="recent-users-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── USERS PANEL ── -->
+            <div class="panel" id="panel-users">
+                <div class="main-header">
+                    <div class="main-title">Users <span class="title-dim" id="user-count-label">/ 0 total</span></div>
+                    <div class="header-actions">
+                        <button class="btn btn-ghost" onclick="exportUsersCSV()">📥 Export CSV</button>
+                        <button class="btn btn-ghost" onclick="refreshData()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <span>🔍</span>
+                        <input type="text" id="user-search" placeholder="Search by email, username..." oninput="renderUsersTable()">
+                    </div>
+                    <div class="filter-pills">
+                        <button class="filter-pill active" data-filter="all" onclick="setFilter('all', this)">All</button>
+                        <button class="filter-pill" data-filter="free" onclick="setFilter('free', this)">Free</button>
+                        <button class="filter-pill" data-filter="starter" onclick="setFilter('starter', this)">Starter</button>
+                        <button class="filter-pill" data-filter="pro" onclick="setFilter('pro', this)">Pro</button>
+                        <button class="filter-pill" data-filter="agency" onclick="setFilter('agency', this)">Agency</button>
+                        <button class="filter-pill" data-filter="banned" onclick="setFilter('banned', this)">Banned</button>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th onclick="sortUsers('email')">User ↕</th>
+                                <th onclick="sortUsers('plan')">Plan ↕</th>
+                                <th onclick="sortUsers('totalCredits')">Credits ↕</th>
+                                <th>Status</th>
+                                <th onclick="sortUsers('createdAt')">Joined ↕</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                    <div class="table-count" id="table-count">Showing 0 users</div>
+                </div>
+            </div>
+
+            <!-- ── SUB-ADMINS PANEL ── -->
+            <div class="panel" id="panel-subadmins">
+                <div class="main-header">
+                    <div class="main-title">Sub-Admins <span class="title-dim">/ Management</span></div>
+                    <div class="header-actions" id="create-subadmin-area">
+                        <button class="btn btn-blue" onclick="openModal('modal-subadmin')">+ Create Sub-Admin</button>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Email</th><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="subadmins-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── PRICING PANEL (master) ── -->
+            <div class="panel" id="panel-pricing">
+                <div class="main-header">
+                    <div class="main-title">Pricing <span class="title-dim">/ Plan prices</span></div>
+                    <div class="header-actions">
+                        <button class="btn btn-ghost" onclick="loadPricing()">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Plan</th><th>Credits</th><th>Monthly ($)</th><th>Annual ($)</th><th></th></tr>
+                        </thead>
+                        <tbody id="pricing-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── PAYMENT SETTINGS PANEL (master) ── -->
+            <div class="panel" id="panel-payment">
+                <div class="main-header">
+                    <div class="main-title">Payment Settings <span class="title-dim">/ Stripe & Key product</span></div>
+                </div>
+
+                <!-- Stripe keys -->
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.25rem;">
+                    <div style="font-weight:700;margin-bottom:0.4rem;">💳 Stripe</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
+                        Your Stripe account receives all card payments. Status:
+                        <span id="stripe-status" style="color:var(--text-muted)">loading…</span>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Stripe Secret Key <span id="stripe-current" style="text-transform:none;color:var(--text-muted);font-weight:400"></span></label>
+                        <input class="form-input" type="password" id="set-stripe-secret" placeholder="sk_live_...  (leave blank to keep current)">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Stripe Webhook Secret <span style="text-transform:none;color:var(--text-muted);font-weight:400">(from your Stripe webhook endpoint)</span></label>
+                        <input class="form-input" type="password" id="set-stripe-webhook" placeholder="whsec_...  (leave blank to keep current)">
+                    </div>
+                    <button class="btn btn-blue" onclick="saveStripeKeys()">Save Stripe Keys</button>
+                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.6rem;">All card payments go directly to this Stripe account.</span>
+                </div>
+
+                <!-- Key product -->
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;">
+                    <div style="font-weight:700;margin-bottom:0.4rem;">🔑 Verification Key product</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
+                        What a customer gets when they buy a key on the <a href="/key" target="_blank" style="color:var(--blue)">/key</a> page.
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+                        <div class="form-field" style="margin:0;">
+                            <label class="form-label">Price (USD)</label>
+                            <input class="form-input" type="number" id="set-key-price" min="0" step="1">
+                        </div>
+                        <div class="form-field" style="margin:0;">
+                            <label class="form-label">Emails per key</label>
+                            <input class="form-input" type="number" id="set-key-tokens" min="1" step="1">
+                        </div>
+                        <div class="form-field" style="margin:0;">
+                            <label class="form-label">Valid (days)</label>
+                            <input class="form-input" type="number" id="set-key-days" min="1" step="1">
+                        </div>
+                    </div>
+                    <button class="btn btn-blue" style="margin-top:1rem;" onclick="saveKeyProduct()">Save Key Product</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ════════ CREATE SUB-ADMIN MODAL ════════ -->
+    <div class="modal-overlay" id="modal-subadmin">
+        <div class="modal">
+            <div class="modal-title">🛡️ Create Sub-Admin</div>
+            <div class="form-field">
+                <label class="form-label">Email</label>
+                <input class="form-input" type="email" id="sa-email" placeholder="admin@truesendy.com">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Username</label>
+                <input class="form-input" type="text" id="sa-username" placeholder="sub_admin_1">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Password</label>
+                <input class="form-input" type="password" id="sa-password" placeholder="Strong password...">
+            </div>
+            <div class="login-error" id="sa-error"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModal('modal-subadmin')">Cancel</button>
+                <button class="btn btn-blue" onclick="createSubAdmin()">Create Sub-Admin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ EDIT USER MODAL ════════ -->
+    <div class="modal-overlay" id="modal-edit-user">
+        <div class="modal">
+            <div class="modal-title">✏️ Edit User — <span id="edit-user-email"></span></div>
+            <div class="form-field">
+                <label class="form-label">Free Credits</label>
+                <input class="form-input" type="number" id="edit-credits" min="0">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Plan</label>
+                <select class="form-input" id="edit-plan">
+                    <option value="free">Free</option>
+                    <option value="starter">Starter ($19/mo)</option>
+                    <option value="pro">Pro ($49/mo)</option>
+                    <option value="agency">Agency ($149/mo)</option>
+                </select>
+            </div>
+            <div class="login-error" id="edit-error"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModal('modal-edit-user')">Cancel</button>
+                <button class="btn btn-blue" onclick="saveUserEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ USER TOOLS MODAL (keys + tokens) ════════ -->
+    <div class="modal-overlay" id="modal-user-tools">
+        <div class="modal">
+            <div class="modal-title">🛠️ Keys & Tokens — <span id="tools-email"></span></div>
+
+            <div class="form-field">
+                <label class="form-label">Add tokens (purchased balance — support / refund)</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <input class="form-input" type="number" id="tools-credit-amount" min="1" placeholder="e.g. 100000" style="flex:1">
+                    <button class="btn btn-blue" onclick="toolsAddTokens()">Add</button>
+                </div>
+            </div>
+
+            <button class="btn btn-amber" onclick="toolsResendKey()" style="width:100%;margin-bottom:1rem;">📧 Resend latest key to user's email</button>
+
+            <div class="form-label" style="margin-bottom:0.5rem;">API keys</div>
+            <div id="tools-keys" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.5rem;max-height:200px;overflow-y:auto;font-size:0.8rem;"></div>
+
+            <div class="login-error" id="tools-error"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModal('modal-user-tools')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="admin-toast"></div>
+
+    <script>
+        // ── STATE ──
+        let adminToken = sessionStorage.getItem('ts_admin_token') || null;
+        let adminRole = sessionStorage.getItem('ts_admin_role') || null;
+        let adminUsername = sessionStorage.getItem('ts_admin_username') || '';
+        let allUsers = [];
+        let currentFilter = 'all';
+        let sortField = 'createdAt';
+        let sortDir = -1; // -1 = newest first
+        let editingUserId = null;
+
+        // ── INIT ──
+        if (adminToken) {
+            showAdmin();
+        }
+
+        // ── LOGIN ──
+        async function doAdminLogin() {
+            const username = document.getElementById('admin-user').value.trim();
+            const password = document.getElementById('admin-pass').value;
+            const errEl = document.getElementById('admin-login-error');
+            errEl.textContent = '';
+
+            if (!username || !password) { errEl.textContent = 'Enter username and password.'; return; }
+
+            document.getElementById('admin-login-btn').disabled = true;
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.error) { errEl.textContent = data.error; return; }
+
+                adminToken = data.token;
+                adminRole = data.role;
+                adminUsername = data.username;
+                sessionStorage.setItem('ts_admin_token', adminToken);
+                sessionStorage.setItem('ts_admin_role', adminRole);
+                sessionStorage.setItem('ts_admin_username', adminUsername);
+
+                showAdmin();
+            } catch (e) {
+                errEl.textContent = 'Server error.';
+            } finally {
+                document.getElementById('admin-login-btn').disabled = false;
+            }
+        }
+
+        // Enter key
+        document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doAdminLogin(); });
+        document.getElementById('admin-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('admin-pass').focus(); });
+
+        function showAdmin() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-layout').classList.add('active');
+
+            const roleEl = document.getElementById('sidebar-role');
+            roleEl.textContent = adminRole === 'master' ? '🔑 Master Admin' : '🛡️ Sub-Admin';
+            roleEl.className = 'sidebar-role ' + (adminRole === 'master' ? 'role-master' : 'role-subadmin');
+
+            // Hide sub-admin creation + billing for non-master
+            if (adminRole !== 'master') {
+                document.getElementById('create-subadmin-area').style.display = 'none';
+                document.getElementById('link-pricing')?.style.setProperty('display','none');
+                document.getElementById('link-payment')?.style.setProperty('display','none');
+            }
+
+            refreshData();
+        }
+
+        function adminLogout() {
+            adminToken = null;
+            adminRole = null;
+            sessionStorage.removeItem('ts_admin_token');
+            sessionStorage.removeItem('ts_admin_role');
+            sessionStorage.removeItem('ts_admin_username');
+            document.getElementById('admin-layout').classList.remove('active');
+            document.getElementById('login-screen').style.display = '';
+            document.getElementById('admin-user').value = '';
+            document.getElementById('admin-pass').value = '';
+        }
+
+        // ── API ──
+        function adminHeaders() {
+            return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken };
+        }
+
+        async function refreshData() {
+            try {
+                const [statsRes, usersRes] = await Promise.all([
+                    fetch('/api/admin/stats', { headers: adminHeaders() }),
+                    fetch('/api/admin/users', { headers: adminHeaders() })
+                ]);
+
+                if (statsRes.status === 401 || usersRes.status === 401) { adminLogout(); return; }
+
+                const stats = await statsRes.json();
+                const usersData = await usersRes.json();
+                allUsers = usersData.users || [];
+
+                // Update stats
+                document.getElementById('st-total').textContent = stats.totalUsers.toLocaleString();
+                document.getElementById('st-verified').textContent = stats.verifiedUsers.toLocaleString();
+                document.getElementById('st-free').textContent = (stats.planCounts.free || 0).toLocaleString();
+                document.getElementById('st-starter').textContent = (stats.planCounts.starter || 0).toLocaleString();
+                document.getElementById('st-pro').textContent = (stats.planCounts.pro || 0).toLocaleString();
+                document.getElementById('st-agency').textContent = (stats.planCounts.agency || 0).toLocaleString();
+                document.getElementById('st-credits').textContent = stats.totalCreditsIssued.toLocaleString();
+                document.getElementById('st-tokens-used').textContent = (stats.totalTokensUsed || 0).toLocaleString();
+                document.getElementById('st-bot-downloads').textContent = (stats.botDownloads || 0).toLocaleString();
+                document.getElementById('st-active-bot').textContent = (stats.activeBotUsers || 0).toLocaleString();
+                document.getElementById('st-subadmins').textContent = stats.subAdmins.toLocaleString();
+
+                // Render tables
+                renderRecentUsers();
+                renderUsersTable();
+                renderSubAdmins();
+
+                toast('✅ Data refreshed');
+            } catch (e) {
+                toast('❌ Failed to load data');
+            }
+        }
+
+        // ── RENDER: Recent users (dashboard) ──
+        function renderRecentUsers() {
+            const body = document.getElementById('recent-users-body');
+            const recent = [...allUsers].filter(u => u.role !== 'subadmin').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
+            body.innerHTML = recent.map(u => `
+                <tr>
+                    <td><div class="user-email">${esc(u.email)}</div><div class="user-username">@${esc(u.username)}</div></td>
+                    <td><span class="badge badge-${u.plan}">${u.plan}</span></td>
+                    <td><span class="credit-value">${u.totalCredits.toLocaleString()}</span></td>
+                    <td>${u.verified ? '<span class="badge badge-verified">Verified</span>' : '<span class="badge badge-unverified">Unverified</span>'}</td>
+                    <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(u.createdAt)}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="table-empty">No users yet</td></tr>';
+        }
+
+        // ── RENDER: Full users table ──
+        function renderUsersTable() {
+            const search = (document.getElementById('user-search')?.value || '').toLowerCase();
+            let filtered = allUsers.filter(u => u.role !== 'subadmin');
+
+            if (currentFilter === 'banned') {
+                filtered = allUsers.filter(u => u.banned);
+            } else if (currentFilter !== 'all') {
+                filtered = filtered.filter(u => u.plan === currentFilter);
+            }
+
+            if (search) {
+                filtered = filtered.filter(u =>
+                    u.email.toLowerCase().includes(search) ||
+                    u.username.toLowerCase().includes(search) ||
+                    u.id.toLowerCase().includes(search)
+                );
+            }
+
+            // Sort
+            filtered.sort((a, b) => {
+                let va = a[sortField], vb = b[sortField];
+                if (sortField === 'totalCredits') { va = Number(va); vb = Number(vb); }
+                if (sortField === 'createdAt') { va = new Date(va); vb = new Date(vb); }
+                if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+                return va > vb ? sortDir : va < vb ? -sortDir : 0;
+            });
+
+            const body = document.getElementById('users-table-body');
+            const isMaster = adminRole === 'master';
+
+            body.innerHTML = filtered.map(u => `
+                <tr>
+                    <td>
+                        <div class="user-email">${esc(u.email)}</div>
+                        <div class="user-username">@${esc(u.username)} · <span style="font-size:0.65rem;opacity:0.5">${u.id}</span></div>
+                    </td>
+                    <td><span class="badge badge-${u.plan}">${u.plan}</span></td>
+                    <td>
+                        <span class="credit-value">${u.totalCredits.toLocaleString()}</span>
+                        <div style="font-size:0.68rem;color:var(--text-muted)">Bought: ${(u.purchasedTokens||0).toLocaleString()} · Used: ${(u.tokensUsed||0).toLocaleString()} · Left: ${u.totalCredits.toLocaleString()}</div>
+                    </td>
+                    <td>
+                        ${u.verified ? '<span class="badge badge-verified">✓</span>' : '<span class="badge badge-unverified">✗</span>'}
+                        ${u.banned ? ' <span class="badge badge-banned">Banned</span>' : ''}
+                    </td>
+                    <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(u.createdAt)}</td>
+                    <td>
+                        <div class="actions-cell">
+                            <button class="btn btn-ghost btn-sm" title="Keys & tokens" onclick="openUserTools('${u.id}','${esc(u.email)}')">🛠️</button>
+                            <button class="btn btn-ghost btn-sm" onclick="openEditUser('${u.id}')">✏️</button>
+                            <button class="btn ${u.banned ? 'btn-green' : 'btn-amber'} btn-sm" onclick="toggleBan('${u.id}', ${!u.banned})">${u.banned ? '🔓' : '🔒'}</button>
+                            ${isMaster ? `<button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}', '${esc(u.email)}')">🗑️</button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="table-empty">No users match your search</td></tr>';
+
+            document.getElementById('table-count').textContent = `Showing ${filtered.length} of ${allUsers.filter(u => u.role !== 'subadmin').length} users`;
+            document.getElementById('user-count-label').textContent = `/ ${allUsers.filter(u => u.role !== 'subadmin').length} total`;
+        }
+
+        // ── RENDER: Sub-admins ──
+        function renderSubAdmins() {
+            const body = document.getElementById('subadmins-body');
+            const subs = allUsers.filter(u => u.role === 'subadmin');
+            const isMaster = adminRole === 'master';
+
+            body.innerHTML = subs.map(u => `
+                <tr>
+                    <td class="user-email">${esc(u.email)}</td>
+                    <td>@${esc(u.username)}</td>
+                    <td><span class="badge badge-subadmin">Sub-Admin</span></td>
+                    <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(u.createdAt)}</td>
+                    <td>
+                        ${isMaster ? `<button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}', '${esc(u.email)}')">🗑️ Remove</button>` : '<span style="color:var(--text-muted);font-size:0.78rem">—</span>'}
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="table-empty">No sub-admins yet</td></tr>';
+        }
+
+        // ── ACTIONS ──
+        function openEditUser(id) {
+            const user = allUsers.find(u => u.id === id);
+            if (!user) return;
+            editingUserId = id;
+            document.getElementById('edit-user-email').textContent = user.email;
+            document.getElementById('edit-credits').value = user.credits;
+            document.getElementById('edit-plan').value = user.plan === 'admin' ? 'free' : user.plan;
+            document.getElementById('edit-error').textContent = '';
+            openModal('modal-edit-user');
+        }
+
+        async function saveUserEdit() {
+            if (!editingUserId) return;
+            const credits = document.getElementById('edit-credits').value;
+            const plan = document.getElementById('edit-plan').value;
+            const errEl = document.getElementById('edit-error');
+            errEl.textContent = '';
+
+            try {
+                const [r1, r2] = await Promise.all([
+                    fetch(`/api/admin/users/${editingUserId}/credits`, {
+                        method: 'POST', headers: adminHeaders(), body: JSON.stringify({ credits: parseInt(credits) })
+                    }),
+                    fetch(`/api/admin/users/${editingUserId}/plan`, {
+                        method: 'POST', headers: adminHeaders(), body: JSON.stringify({ plan })
+                    })
+                ]);
+
+                const d1 = await r1.json(), d2 = await r2.json();
+                if (d1.error) { errEl.textContent = d1.error; return; }
+                if (d2.error) { errEl.textContent = d2.error; return; }
+
+                closeModal('modal-edit-user');
+                toast('✅ User updated');
+                refreshData();
+            } catch { errEl.textContent = 'Failed to save.'; }
+        }
+
+        async function toggleBan(id, ban) {
+            await fetch(`/api/admin/users/${id}/ban`, {
+                method: 'POST', headers: adminHeaders(), body: JSON.stringify({ banned: ban })
+            });
+            toast(ban ? '🔒 User banned' : '🔓 User unbanned');
+            refreshData();
+        }
+
+        async function deleteUser(id, email) {
+            if (!confirm(`Delete user ${email}? This cannot be undone.`)) return;
+            const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE', headers: adminHeaders() });
+            const data = await res.json();
+            if (data.error) { toast('❌ ' + data.error); return; }
+            toast('🗑️ User deleted');
+            refreshData();
+        }
+
+        async function createSubAdmin() {
+            const email = document.getElementById('sa-email').value.trim();
+            const username = document.getElementById('sa-username').value.trim();
+            const password = document.getElementById('sa-password').value;
+            const errEl = document.getElementById('sa-error');
+            errEl.textContent = '';
+
+            if (!email || !username || !password) { errEl.textContent = 'All fields required.'; return; }
+
+            try {
+                const res = await fetch('/api/admin/subadmin', {
+                    method: 'POST', headers: adminHeaders(), body: JSON.stringify({ email, username, password })
+                });
+                const data = await res.json();
+                if (data.error) { errEl.textContent = data.error; return; }
+
+                closeModal('modal-subadmin');
+                document.getElementById('sa-email').value = '';
+                document.getElementById('sa-username').value = '';
+                document.getElementById('sa-password').value = '';
+                toast('🛡️ Sub-admin created');
+                refreshData();
+            } catch { errEl.textContent = 'Server error.'; }
+        }
+
+        // ── EXPORT CSV ──
+        function exportUsersCSV() {
+            const users = allUsers.filter(u => u.role !== 'subadmin');
+            const rows = [['Email', 'Username', 'Plan', 'Credits', 'PlanCredits', 'Verified', 'Joined']];
+            users.forEach(u => rows.push([u.email, u.username, u.plan, u.credits, u.planCredits, u.verified, u.createdAt]));
+            const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `truesendy_users_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            toast('📥 CSV exported');
+        }
+
+        // ── NAVIGATION ──
+        function showPanel(name) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            document.getElementById('panel-' + name)?.classList.add('active');
+            document.querySelector(`.sidebar-link[data-panel="${name}"]`)?.classList.add('active');
+        }
+
+        function setFilter(filter, el) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            renderUsersTable();
+        }
+
+        function sortUsers(field) {
+            if (sortField === field) { sortDir *= -1; }
+            else { sortField = field; sortDir = 1; }
+            renderUsersTable();
+        }
+
+        // ── MODAL ──
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        document.querySelectorAll('.modal-overlay').forEach(o => {
+            o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+        });
+
+        // ── UTILS ──
+        function esc(s) { return String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+        function fmtDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function toast(msg) {
+            const t = document.getElementById('admin-toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._tm);
+            t._tm = setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // ── PRICING (master) ──
+        async function loadPricing() {
+            try {
+                const data = await fetch('/api/admin/pricing', { headers: adminHeaders() }).then(r => r.json());
+                if (data.error) { toast('❌ ' + data.error); return; }
+                const plans = data.plans || {};
+                const body = document.getElementById('pricing-table-body');
+                body.innerHTML = Object.entries(plans).map(([id, p]) => `
+                    <tr>
+                        <td><span class="badge badge-${id}">${esc(p.name)}</span><div style="font-size:0.68rem;color:var(--text-muted);margin-top:2px">${esc(id)}</div></td>
+                        <td><span class="credit-value">${Number(p.credits).toLocaleString()}</span></td>
+                        <td><div class="inline-edit"><input type="number" min="0" step="1" id="px-${id}-m" value="${p.priceMonthly}"></div></td>
+                        <td><div class="inline-edit"><input type="number" min="0" step="1" id="px-${id}-a" value="${p.priceAnnual}"></div></td>
+                        <td><button class="btn btn-blue btn-sm" onclick="savePlanPrice('${id}')">Save</button></td>
+                    </tr>
+                `).join('');
+            } catch { toast('❌ Failed to load pricing'); }
+        }
+
+        async function savePlanPrice(id) {
+            const priceMonthly = Number(document.getElementById(`px-${id}-m`).value);
+            const priceAnnual  = Number(document.getElementById(`px-${id}-a`).value);
+            const res = await fetch('/api/admin/pricing', {
+                method: 'POST', headers: adminHeaders(),
+                body: JSON.stringify({ plan: id, priceMonthly, priceAnnual })
+            }).then(r => r.json());
+            if (res.error) { toast('❌ ' + res.error); return; }
+            toast(`✅ ${id} pricing updated`);
+        }
+
+        // ── PAYMENT SETTINGS (master) ──
+        async function loadPaymentSettings() {
+            try {
+                const s = await fetch('/api/admin/settings', { headers: adminHeaders() }).then(r => r.json());
+                if (s.error) { toast('❌ ' + s.error); return; }
+                const st = s.stripe || {};
+                const statusEl = document.getElementById('stripe-status');
+                statusEl.textContent = st.configured ? 'CONFIGURED ✓' : 'NOT configured';
+                statusEl.style.color = st.configured ? 'var(--green)' : 'var(--red)';
+                document.getElementById('stripe-current').textContent = st.secretKeyMasked ? `(current: ${st.secretKeyMasked})` : '(not set)';
+                const kp = s.keyProduct || {};
+                document.getElementById('set-key-price').value  = kp.priceUsd ?? '';
+                document.getElementById('set-key-tokens').value = kp.tokens ?? '';
+                document.getElementById('set-key-days').value   = kp.validityDays ?? '';
+            } catch { toast('❌ Failed to load settings'); }
+        }
+
+        async function saveStripeKeys() {
+            const secretKey = document.getElementById('set-stripe-secret').value;
+            const webhookSecret = document.getElementById('set-stripe-webhook').value;
+            const body = {};
+            if (secretKey.trim())     body.secretKey     = secretKey.trim();
+            if (webhookSecret.trim()) body.webhookSecret = webhookSecret.trim();
+            if (!body.secretKey && !body.webhookSecret) { toast('Enter a new value to update.'); return; }
+            const res = await fetch('/api/admin/settings/stripe', {
+                method: 'POST', headers: adminHeaders(), body: JSON.stringify(body)
+            }).then(r => r.json());
+            if (res.error) { toast('❌ ' + res.error); return; }
+            document.getElementById('set-stripe-secret').value = '';
+            document.getElementById('set-stripe-webhook').value = '';
+            const st = res.stripe || {};
+            const statusEl = document.getElementById('stripe-status');
+            statusEl.textContent = st.configured ? 'CONFIGURED ✓' : 'NOT configured';
+            statusEl.style.color = st.configured ? 'var(--green)' : 'var(--red)';
+            document.getElementById('stripe-current').textContent = st.secretKeyMasked ? `(current: ${st.secretKeyMasked})` : '(not set)';
+            toast('✅ Stripe keys updated — card payments live');
+        }
+
+        async function saveKeyProduct() {
+            const priceUsd     = Number(document.getElementById('set-key-price').value);
+            const tokens       = Number(document.getElementById('set-key-tokens').value);
+            const validityDays = Number(document.getElementById('set-key-days').value);
+            const res = await fetch('/api/admin/settings/key-product', {
+                method: 'POST', headers: adminHeaders(),
+                body: JSON.stringify({ priceUsd, tokens, validityDays })
+            }).then(r => r.json());
+            if (res.error) { toast('❌ ' + res.error); return; }
+            toast('✅ Key product updated');
+        }
+
+        // ── Mobile sidebar toggle ──
+        (function() {
+            const btn = document.getElementById('mobile-menu-btn');
+            const sidebar = document.getElementById('sidebar');
+            if (btn && sidebar) {
+                btn.addEventListener('click', () => sidebar.classList.toggle('mobile-open'));
+                sidebar.querySelectorAll('.sidebar-link').forEach(l => l.addEventListener('click', () => sidebar.classList.remove('mobile-open')));
+            }
+        })();
+
+        // ── User tools: keys + credit + resend ──
+        let toolsUserId = null;
+        function openUserTools(id, email) {
+            toolsUserId = id;
+            document.getElementById('tools-email').textContent = email;
+            document.getElementById('tools-error').textContent = '';
+            document.getElementById('tools-credit-amount').value = '';
+            toolsLoadKeys();
+            openModal('modal-user-tools');
+        }
+        async function toolsLoadKeys() {
+            const box = document.getElementById('tools-keys');
+            box.innerHTML = '<em style="color:var(--text-muted)">Loading…</em>';
+            try {
+                const data = await fetch(`/api/admin/users/${toolsUserId}/keys`, { headers: adminHeaders() }).then(r => r.json());
+                if (data.error) { box.innerHTML = '<em style="color:var(--red)">' + esc(data.error) + '</em>'; return; }
+                const keys = data.keys || [];
+                box.innerHTML = keys.length ? keys.map(k => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                        <div>
+                            <div style="font-family:'JetBrains Mono',monospace;color:var(--white)">${esc(k.key)}</div>
+                            <div style="font-size:0.68rem;color:var(--text-muted)">${k.purchased ? 'purchased' : 'agency'} · ${k.daysRemaining}d left${k.expired ? ' · EXPIRED' : ''}</div>
+                        </div>
+                        ${k.active ? `<button class="btn btn-red btn-sm" onclick="toolsRevokeKey('${esc(k.key)}')">Revoke</button>` : '<span class="badge badge-unverified">revoked</span>'}
+                    </div>
+                `).join('') : '<em style="color:var(--text-muted)">No API keys.</em>';
+            } catch { box.innerHTML = '<em style="color:var(--red)">Failed to load.</em>'; }
+        }
+        async function toolsAddTokens() {
+            const amount = Number(document.getElementById('tools-credit-amount').value);
+            const err = document.getElementById('tools-error');
+            if (!amount || amount <= 0) { err.textContent = 'Enter a positive number.'; return; }
+            err.textContent = '';
+            const res = await fetch(`/api/admin/users/${toolsUserId}/credit`, {
+                method: 'POST', headers: adminHeaders(), body: JSON.stringify({ amount })
+            }).then(r => r.json());
+            if (res.error) { err.textContent = res.error; return; }
+            toast(`✅ Added ${amount.toLocaleString()} tokens (total now ${res.total.toLocaleString()})`);
+            refreshData();
+        }
+        async function toolsResendKey() {
+            const err = document.getElementById('tools-error');
+            err.textContent = '';
+            const res = await fetch(`/api/admin/users/${toolsUserId}/resend-key`, {
+                method: 'POST', headers: adminHeaders()
+            }).then(r => r.json());
+            if (res.error) { err.textContent = res.error; return; }
+            toast(`✅ Key resent to ${res.sentTo}`);
+        }
+        async function toolsRevokeKey(masked) {
+            if (!confirm('Revoke this API key? The bot will stop working immediately.')) return;
+            const res = await fetch(`/api/admin/users/${toolsUserId}/keys/revoke`, {
+                method: 'POST', headers: adminHeaders(), body: JSON.stringify({ key: masked })
+            }).then(r => r.json());
+            if (res.error) { toast('❌ ' + res.error); return; }
+            toast('🔑 Key revoked');
+            toolsLoadKeys();
+            refreshData();
+        }
+    </script>
+</body>
+</html>

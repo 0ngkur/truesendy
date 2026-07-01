@@ -1,0 +1,25 @@
+{
+  "name": "truesendy-cli",
+  "version": "1.0.0",
+  "description": "TrueSendy Agency Email Verifier CLI Tool",
+  "main": "truesendy-cli.js",
+  "bin": {
+    "TrueSendy": "truesendy-cli.js"
+  },
+  "pkg": {
+    "scripts": "truesendy-cli.js",
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "../dist",
+    "icon": "../assets/truesendy.ico"
+  },
+  "author": "TrueSendy",
+  "license": "MIT",
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}

@@ -1,3 +1,31 @@
 node_modules/
 .env
+.env.local
+.env.*.local
 .DS_Store
+
+# ── Runtime data — never commit (user PII, bcrypt hashes, plaintext OTPs, keys) ──
+db/*.json
+uploads/
+dist/
+.pkg-cache/
+*.exe
+*.log
+
+# ── Local dev launcher (contains dev secrets) ──
+start-server.bat
+
+# ── Local tooling artifacts (session memory, planning, crash dumps) — never push ──
+.planning/
+.remember/
+.claude/
+.playwright-mcp/
+*.stackdump
+REVIEW.md
+AUDIT_REPORT.md
+plans/
+
+# ── Electron desktop app — build artifacts (huge + regenerable), never commit ──
+.electron-cache/
+desktop/dist/
+truesendy-debug.log
