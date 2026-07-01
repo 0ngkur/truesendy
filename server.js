@@ -1086,11 +1086,21 @@ app.post('/api/keys/guest-checkout', async (req, res) => {
 // random fallback so the server boots even if JWT_SECRET isn't set as an env var.
 const ADMIN_JWT_SECRET = JWT_SECRET;
 
-const MASTER_ADMIN = {
-    username: process.env.MASTER_ADMIN_USERNAME || null,
-    password: process.env.MASTER_ADMIN_PASSWORD || null,
-    role: 'master'
-};
+// Master admin credentials. Set MASTER_ADMIN_USERNAME / MASTER_ADMIN_PASSWORD
+// as env vars for stable creds. If unset (e.g. fresh Render deploy), default
+// username to 'admin' and generate a strong random password, printed to the
+// logs — copy it from the Render log stream. Keeps admin enabled without a
+// hardcoded (guessable) password.
+const _adminUser = process.env.MASTER_ADMIN_USERNAME || 'admin';
+const _adminPass = process.env.MASTER_ADMIN_PASSWORD || crypto.randomBytes(6).toString('hex');
+if (!process.env.MASTER_ADMIN_PASSWORD) {
+    console.log('[TrueSendy] ── MASTER ADMIN LOGIN ──');
+    console.log('[TrueSendy]   URL      : /masterenter');
+    console.log('[TrueSendy]   username : ' + _adminUser);
+    console.log('[TrueSendy]   password : ' + _adminPass + '   (random — set MASTER_ADMIN_PASSWORD to fix it)');
+    console.log('[TrueSendy] ──────────────────────────');
+}
+const MASTER_ADMIN = { username: _adminUser, password: _adminPass, role: 'master' };
 
 // Admin auth middleware — uses unified ADMIN_JWT_SECRET
 function adminAuth(req, res, next) {
