@@ -361,6 +361,19 @@ function updateUserPlan(userId, plan) {
     return true;
 }
 
+// Grant purchased tokens (one-time, NEVER reset by the monthly quota). Used for
+// the tester account + support/refunds. Durable write (saveDBSync).
+function grantTokens(userId, amount) {
+    const db = loadDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return false;
+    const n = parseInt(amount, 10);
+    if (!n || n <= 0) return false;
+    user.purchasedTokens = (user.purchasedTokens || 0) + n;
+    saveDBSync(db);
+    return true;
+}
+
 function banUser(userId, banned) {
     const db = loadDB();
     const user = db.users.find(u => u.id === userId);
@@ -672,6 +685,7 @@ module.exports = {
     getAllUsers,
     updateUserCredits,
     updateUserPlan,
+    grantTokens,
     banUser,
     deleteUser,
     createSubAdmin,

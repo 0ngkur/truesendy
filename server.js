@@ -1184,6 +1184,16 @@ app.post('/api/admin/users/:id/plan', adminLimiter, adminAuth, (req, res) => {
     res.json({ success: true });
 });
 
+// Grant purchased tokens (non-resetting). Used for the tester account + support.
+app.post('/api/admin/users/:id/grant-tokens', adminLimiter, adminAuth, (req, res) => {
+    const { amount } = req.body || {};
+    const n = parseInt(amount, 10);
+    if (!n || n <= 0) return res.status(400).json({ error: 'amount must be a positive number.' });
+    const ok = store.grantTokens(req.params.id, n);
+    if (!ok) return res.status(404).json({ error: 'User not found.' });
+    res.json({ success: true, granted: n });
+});
+
 // Ban / Unban user
 app.post('/api/admin/users/:id/ban', adminLimiter, adminAuth, (req, res) => {
     const { banned } = req.body;
