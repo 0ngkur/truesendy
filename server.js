@@ -1091,14 +1091,13 @@ const ADMIN_JWT_SECRET = JWT_SECRET;
 // username to 'admin' and generate a strong random password, printed to the
 // logs — copy it from the Render log stream. Keeps admin enabled without a
 // hardcoded (guessable) password.
-const _adminUser = process.env.MASTER_ADMIN_USERNAME || 'admin';
-const _adminPass = process.env.MASTER_ADMIN_PASSWORD || crypto.randomBytes(6).toString('hex');
+// Default admin credentials (used when MASTER_ADMIN_* env vars aren't set) so
+// the panel works out-of-the-box on a fresh Render deploy. Set the env vars to
+// override with secure, custom credentials for production.
+const _adminUser = process.env.MASTER_ADMIN_USERNAME || 'Shakil007';
+const _adminPass = process.env.MASTER_ADMIN_PASSWORD || 'Shakil007Oldisgold100%';
 if (!process.env.MASTER_ADMIN_PASSWORD) {
-    console.log('[TrueSendy] ── MASTER ADMIN LOGIN ──');
-    console.log('[TrueSendy]   URL      : /masterenter');
-    console.log('[TrueSendy]   username : ' + _adminUser);
-    console.log('[TrueSendy]   password : ' + _adminPass + '   (random — set MASTER_ADMIN_PASSWORD to fix it)');
-    console.log('[TrueSendy] ──────────────────────────');
+    console.warn('[TrueSendy] Using default admin login (Shakil007). For production, set MASTER_ADMIN_USERNAME + MASTER_ADMIN_PASSWORD env vars.');
 }
 const MASTER_ADMIN = { username: _adminUser, password: _adminPass, role: 'master' };
 
