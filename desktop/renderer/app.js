@@ -6,6 +6,7 @@ let auth = { mode: null, token: null, key: null };   // mode: 'token' | 'key'
 let cfg   = { host: 'https://truesendy.com' };
 let currentEmails = [];
 let lastResults   = [];
+let pendingEmail  = null;   // email of the account being created (for OTP verify)
 
 // ── init ─────────────────────────────────────────────────────────────────────
 (async function init() {
@@ -47,9 +48,12 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     const tab = t.dataset.tab;
-    $('pane-login').style.display = tab === 'login' ? '' : 'none';
-    $('pane-key').style.display   = tab === 'key'   ? '' : 'none';
+    $('pane-login').style.display    = tab === 'login' ? '' : 'none';
+    $('pane-register').style.display = tab === 'register' ? '' : 'none';
+    $('pane-key').style.display      = tab === 'key' ? '' : 'none';
+    $('pane-otp').style.display      = 'none';
     $('auth-err').textContent = '';
+    $('auth-err').style.color = '';
 }));
 
 // ── login (email + password) ─────────────────────────────────────────────────
@@ -92,6 +96,64 @@ $('key-btn').addEventListener('click', async () => {
     } finally {
         $('key-btn').disabled = false;
     }
+});
+
+// ── create account (register → OTP → unlock) ─────────────────────────────────
+$('reg-btn').addEventListener('click', async () => {
+    const email    = $('reg-email').value.trim();
+    const username = $('reg-username').value.trim();
+    const password = $('reg-pass').value;
+    const errEl = $('auth-err'); errEl.textContent = ''; errEl.style.color = '';
+    if (!email || !username || !password) { errEl.textContent = 'Fill in all fields.'; return; }
+    if (password.length < 6)              { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+    if (username.length < 3 || username.length > 32) { errEl.textContent = 'Username must be 3-32 characters.'; return; }
+    $('reg-btn').disabled = true;
+    try {
+        const r = await fetch(cfg.host + '/api/auth/register', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, username, password })
+        }).then(r => r.json());
+        if (r.error) { errEl.textContent = r.error; return; }
+        // account created — switch to OTP entry
+        pendingEmail = email;
+        auth = { mode: 'token', token: r.token };
+        $('pane-register').style.display = 'none';
+        $('pane-otp').style.display = '';
+        if (r.devOTP) {
+            errEl.style.color = 'var(--green)';
+            errEl.textContent = 'Dev mode — your code: ' + r.devOTP;
+        }
+    } catch (e) {
+        errEl.textContent = `Can't reach ${cfg.host}. Open Settings (⚙) and check the server URL.`;
+    } finally {
+        $('reg-btn').disabled = false;
+    }
+});
+
+// ── verify OTP (complete account creation) ───────────────────────────────────
+$('otp-btn').addEventListener('click', async () => {
+    const code = $('otp-code').value.trim();
+    const errEl = $('auth-err');
+    if (code.length !== 6) { errEl.style.color = ''; errEl.textContent = 'Enter the 6-digit code.'; return; }
+    $('otp-btn').disabled = true;
+    try {
+        const r = await fetch(cfg.host + '/api/auth/verify-otp', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: pendingEmail, otp: code })
+        }).then(r => r.json());
+        if (r.error) { errEl.style.color = ''; errEl.textContent = r.error; $('otp-btn').disabled = false; return; }
+        auth = { mode: 'token', token: r.token };
+        await saveCfg();
+        showMain();
+    } catch (e) {
+        errEl.style.color = '';
+        errEl.textContent = `Can't reach ${cfg.host}.`;
+        $('otp-btn').disabled = false;
+    }
+});
+$('otp-back').addEventListener('click', () => {
+    $('pane-otp').style.display = 'none';
+    document.querySelector('.tab[data-tab="login"]').click();
 });
 
 $('buy-key-link').addEventListener('click', () => window.ts.openExternal('https://truesendy.com/key'));

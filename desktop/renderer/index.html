@@ -21,6 +21,7 @@
 
     <div class="tabs">
       <div class="tab active" data-tab="login">Sign in</div>
+      <div class="tab" data-tab="register">Create Account</div>
       <div class="tab" data-tab="key">Enter key</div>
     </div>
 
@@ -33,6 +34,20 @@
     <div id="pane-key" class="pane" style="display:none">
       <input id="key-input" type="text" placeholder="ts_…" autocomplete="off">
       <button id="key-btn" class="btn-primary">Activate key →</button>
+    </div>
+
+    <div id="pane-register" class="pane" style="display:none">
+      <input id="reg-email" type="email" placeholder="Email" autocomplete="email">
+      <input id="reg-username" type="text" placeholder="Username (3-32 chars)" autocomplete="username">
+      <input id="reg-pass" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password">
+      <button id="reg-btn" class="btn-primary">Create Account →</button>
+    </div>
+
+    <div id="pane-otp" class="pane" style="display:none">
+      <p style="font-size:.85rem;color:var(--muted);text-align:center;margin-bottom:.7rem;">Enter the 6-digit code sent to your email</p>
+      <input id="otp-code" type="text" inputmode="numeric" maxlength="6" placeholder="------" autocomplete="one-time-code" style="text-align:center;font-size:1.4rem;letter-spacing:6px;font-family:'JetBrains Mono',monospace;">
+      <button id="otp-btn" class="btn-primary">Verify &amp; Unlock →</button>
+      <div class="auth-foot"><a id="otp-back">← Back</a></div>
     </div>
 
     <div id="auth-err" class="err"></div>

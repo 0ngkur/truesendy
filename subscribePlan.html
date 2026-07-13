@@ -726,14 +726,27 @@
         }
 
         // ── Select plan highlight ──
-        function selectPlan(plan) {
+        async function selectPlan(plan) {
             document.querySelectorAll('.sub-card').forEach(c => c.classList.remove('selected'));
             document.getElementById(`card-${plan}`).classList.add('selected');
-            // In a real app: redirect to checkout with plan + billing period
-            const price = isAnnual ? PLANS[plan].annual : PLANS[plan].monthly;
             const billing = isAnnual ? 'annual' : 'monthly';
-            // For now show a toast — swap with Stripe redirect when ready
-            showToast(`🔒 Redirecting to checkout for ${plan.charAt(0).toUpperCase() + plan.slice(1)} — $${price}/${billing === 'monthly' ? 'mo' : 'yr'}...`);
+            const token = localStorage.getItem('ts_token');
+            if (!token) {
+                showToast('Please sign in first.');
+                setTimeout(() => window.location.href = '/signin', 1200);
+                return;
+            }
+            showToast('Redirecting to secure checkout…');
+            try {
+                const r = await fetch('/api/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ plan, billingCycle: billing })
+                }).then(r => r.json());
+                if (r.error) { showToast(r.error); return; }
+                if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return; }
+                if (r.devMode) { showToast(`✓ Upgraded to ${plan}! (dev mode)`); setTimeout(() => window.location.href = '/#verify', 1500); }
+            } catch (e) { showToast('Could not reach the server. Try again.'); }
         }
 
         // ── Pre-select from URL param ──
