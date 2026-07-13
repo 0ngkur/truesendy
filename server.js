@@ -226,6 +226,7 @@ const PAGE_FILES = {
     '/emailcheckup'  : path.join(__dirname, 'emailcheckup.html'), // ← Email Checkup tool
     '/key'           : path.join(__dirname, 'key.html'),
     '/checkout'      : path.join(__dirname, 'checkout.html'),
+    '/dashboard'     : path.join(__dirname, 'dashboard.html'),
 };
 
 // Verify all files exist at boot — fail loud, not silently at runtime
