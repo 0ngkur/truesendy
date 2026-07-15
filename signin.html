@@ -726,7 +726,7 @@
         if (authToken) {
             fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + authToken } })
                 .then(r => r.json())
-                .then(d => { if (d.user) window.location.href = '/'; })
+                .then(d => { if (d.user) window.location.href = '/emailcheckup'; })
                 .catch(() => {});
         }
 
@@ -806,8 +806,8 @@
                 return;
             }
 
-            // Success — go home
-            window.location.href = '/#verify';
+            // Success — go to the email verifier
+            window.location.href = '/emailcheckup';
         }
 
         // ── SIGN UP ──
@@ -897,7 +897,7 @@
             }
 
             okEl.textContent = '✅ Email verified! Redirecting…';
-            setTimeout(() => window.location.href = '/#verify', 1200);
+            setTimeout(() => window.location.href = '/emailcheckup', 1200);
         }
 
         async function doResend() {

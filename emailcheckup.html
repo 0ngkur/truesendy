@@ -562,11 +562,8 @@ dropZone.addEventListener('drop', ev => {
 fileInput.addEventListener('change', () => {
   if (fileInput.files[0]) handleFile(fileInput.files[0]);
 });
-dropZone.addEventListener('click', e => {
-  if (e.target === dropZone || e.target.classList.contains('drop-icon') ||
-      e.target.classList.contains('drop-title') || e.target.classList.contains('drop-sub')) {
-    fileInput.click();
-  }
+dropZone.addEventListener('click', () => {
+  fileInput.click();
 });
 
 const EXT_ICONS = { csv:'📊', txt:'📄', xlsx:'📗', xls:'📗', pdf:'📕', docx:'📘' };
