@@ -567,30 +567,10 @@
             }
         })();
 
-        // ── Premium-gated bot download ────────────────────────────────────────
-        // The bot is downloadable only by premium users (paid plan OR purchased
-        // key). Free / logged-out users are redirected to sign in or buy.
-        (async function() {
-            const dlLinks = Array.from(document.querySelectorAll('a[href*="/downloads/TrueSendy"]'));
-            if (!dlLinks.length) return;
-            const token = localStorage.getItem('ts_token');
-            if (!token) {
-                dlLinks.forEach(a => { a.addEventListener('click', e => { e.preventDefault(); window.location.href = '/signin'; }); });
-                return;
-            }
-            try {
-                const u = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()).then(d => d.user || {});
-                const premium = (u.plan && u.plan !== 'free') || (u.purchasedTokens > 0);
-                if (premium) {
-                    dlLinks.forEach(a => { a.href = a.href.split('?')[0] + '?token=' + encodeURIComponent(token); });
-                } else {
-                    dlLinks.forEach(a => {
-                        a.addEventListener('click', e => { e.preventDefault(); window.location.href = '/key'; });
-                        a.textContent = '🔓 Buy a Key to Download';
-                    });
-                }
-            } catch { /* fall through — link will 401 on click */ }
-        })();
+        // ── Public bot download (standard SaaS pattern) ──────────────────────
+        // Anyone can download the bot. Sign in / create account happens INSIDE
+        // the app after install. No tokens = no verification (enforced server-side).
+        // No gating JS needed — download links work directly.
     </script>
 </body>
 </html>

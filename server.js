@@ -265,36 +265,65 @@ Object.entries(PAGE_FILES).forEach(([route, fp]) => {
 
 // ── Premium-gated bot download ───────────────────────────────────────────────
 // The exe is NOT served as a public static file. Requires ?token=<jwt> of a
-// PREMIUM user (paid plan OR purchased tokens). Free users who just signed up
-// are blocked from downloading the bot.
+// PUBLIC download — anyone can get the bot (standard SaaS pattern: download freely,
+// sign in inside the app). Optionally count the download if a token is present.
 function serveBotExe(req, res, filePath, filename) {
+    // Optional: count the download for the user if they're logged in
     const token = (req.query.token || '').toString();
-    let userId = null;
-    try {
-        const jwtLib = require('jsonwebtoken');
-        userId = jwtLib.verify(token, JWT_SECRET, { algorithms: ['HS256'] }).id;
-    } catch {
-        return res.status(401).json({ error: 'Sign in to download the TrueSendy bot.' });
-    }
-    const user = store.findUserById(userId);
-    if (!user) return res.status(401).json({ error: 'Sign in to download the TrueSendy bot.' });
-
-    const premium = (user.plan && user.plan !== 'free') || (user.purchasedTokens > 0);
-    if (!premium) {
-        return res.status(403).json({ error: 'Buy a plan or a verification key to download the bot.' });
-    }
-    if (!fs.existsSync(filePath)) {
-        // File not on this server (gitignored exe) — redirect to GitHub release.
-        settings.incBotDownload();
-        store.markBotDownloaded(user.id);
-        return res.redirect(302, 'https://github.com/0ngkur/truesendy/releases/download/v1.0.0/TrueSendy-Setup.exe');
+    if (token) {
+        try {
+            const jwtLib = require('jsonwebtoken');
+            const userId = jwtLib.verify(token, JWT_SECRET, { algorithms: ['HS256'] }).id;
+            store.markBotDownloaded(userId);
+        } catch { /* not logged in — that's fine, download is public */ }
     }
     settings.incBotDownload();
-    store.markBotDownloaded(user.id);
+
+    if (!fs.existsSync(filePath)) {
+        // File not cached on this server — redirect to GitHub release (one-time, cached on next boot).
+        return res.redirect(302, 'https://github.com/0ngkur/truesendy/releases/download/v1.0.0/TrueSendy-Setup.exe');
+    }
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/octet-stream');
     res.sendFile(filePath);
 }
+
+// ── Boot-time exe fetcher: download the installer from GitHub + cache it locally ──
+// so the exe is served from truesendy.com, not a redirect. Runs once on first boot.
+const EXE_CACHE_PATH = path.join(__dirname, 'downloads', 'TrueSendy-Setup.exe');
+const EXE_GITHUB_URL = 'https://github.com/0ngkur/truesendy/releases/download/v1.0.0/TrueSendy-Setup.exe';
+function fetchExeOnBoot() {
+    if (fs.existsSync(EXE_CACHE_PATH)) {
+        console.log('[TrueSendy] Bot exe cached locally — serving from VPS.');
+        return;
+    }
+    console.log('[TrueSendy] Fetching bot exe from GitHub release (one-time, ~80MB)...');
+    const https = require('https');
+    const dir = path.dirname(EXE_CACHE_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const file = fs.createWriteStream(EXE_CACHE_PATH);
+    const handleRedirect = (response) => {
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            https.get(response.headers.location, handleRedirect).on('error', () => {
+                console.warn('[TrueSendy] Could not fetch bot exe — will redirect to GitHub on download.');
+                file.close();
+                try { fs.unlinkSync(EXE_CACHE_PATH); } catch {}
+            });
+        } else {
+            response.pipe(file);
+            file.on('finish', () => {
+                file.close();
+                console.log('[TrueSendy] Bot exe cached — future downloads served from VPS.');
+            });
+        }
+    };
+    https.get(EXE_GITHUB_URL, handleRedirect).on('error', () => {
+        console.warn('[TrueSendy] Could not fetch bot exe — will redirect to GitHub on download.');
+        file.close();
+        try { fs.unlinkSync(EXE_CACHE_PATH); } catch {}
+    });
+}
+fetchExeOnBoot();
 
 app.get('/downloads/TrueSendy.exe',       (req, res) => serveBotExe(req, res, path.join(__dirname, 'dist',      'TrueSendy.exe'),       'TrueSendy.exe'));
 app.get('/downloads/TrueSendy-Setup.exe', (req, res) => serveBotExe(req, res, path.join(__dirname, 'downloads', 'TrueSendy-Setup.exe'), 'TrueSendy-Setup.exe'));
