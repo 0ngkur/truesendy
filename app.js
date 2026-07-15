@@ -339,11 +339,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ======================== DRAG & DROP ========================
-    uploadZone.addEventListener('click', () => fileInput.click());
-    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--purple)'; uploadZone.style.background = 'rgba(168,85,247,0.04)'; });
-    uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = ''; uploadZone.style.background = ''; });
-    uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.style.borderColor = ''; uploadZone.style.background = ''; if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]); });
-    fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
+    const uploadZone = document.getElementById('uploadZone');
+    if (uploadZone) {
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--purple)'; uploadZone.style.background = 'rgba(168,85,247,0.04)'; });
+        uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = ''; uploadZone.style.background = ''; });
+        uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.style.borderColor = ''; uploadZone.style.background = ''; if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]); });
+    }
+    if (fileInput) fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
 
     // ======================== BULK FILE ========================
     async function handleFile(file) {

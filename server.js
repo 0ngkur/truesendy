@@ -284,7 +284,10 @@ function serveBotExe(req, res, filePath, filename) {
         return res.status(403).json({ error: 'Buy a plan or a verification key to download the bot.' });
     }
     if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'Executable not found. Contact support.' });
+        // File not on this server (gitignored exe) — redirect to GitHub release.
+        settings.incBotDownload();
+        store.markBotDownloaded(user.id);
+        return res.redirect(302, 'https://github.com/0ngkur/truesendy/releases/download/v1.0.0/TrueSendy-Setup.exe');
     }
     settings.incBotDownload();
     store.markBotDownloaded(user.id);
