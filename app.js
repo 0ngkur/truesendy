@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ======================== DRAG & DROP ========================
-    const uploadZone = document.getElementById('uploadZone');
+    const uploadZone = document.getElementById('upload-zone');
     if (uploadZone) {
         uploadZone.addEventListener('click', () => fileInput.click());
         uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--purple)'; uploadZone.style.background = 'rgba(168,85,247,0.04)'; });
