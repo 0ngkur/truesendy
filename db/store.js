@@ -149,7 +149,7 @@ async function updatePassword(email, newPassword) {
 // runs on the first credit read/deduct in a new month. Purchased API-key
 // tokens (100k / 30 days, in apikeys.json) are a SEPARATE bucket and are never
 // touched by this logic.
-const FREE_MONTHLY_TOKENS = 5;
+const FREE_MONTHLY_TOKENS = 50;
 const PLAN_MONTHLY_TOKENS = { starter: 1000, pro: 10000, agency: 100000 };
 
 function _monthKey() { return new Date().toISOString().slice(0, 7); } // e.g. "2026-07"

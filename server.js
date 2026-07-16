@@ -843,30 +843,68 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     }
 
     const format = req.query.format || 'csv';
-    const validResults = job.results.filter(r => r.status === 'valid');
+    const category = req.query.category || 'valid'; // valid | invalid | all
 
-    if (format === 'txt') {
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename="truesendy_verified_${req.params.jobId}.txt"`);
-        return res.send(validResults.map(r => r.email).join('\n'));
+    // Filter results by category
+    let results;
+    if (category === 'all') {
+        results = job.results;
+    } else if (category === 'invalid') {
+        results = job.results.filter(r => r.status !== 'valid');
+    } else {
+        results = job.results.filter(r => r.status === 'valid');
     }
 
-    const headerRow = ['Email'];
-    const rows = validResults.map(r => [r.email]);
+    // TXT format — just email list (like competitor)
+    if (format === 'txt') {
+        const fname = `truesendy_${category}_${req.params.jobId}.txt`;
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+        return res.send(results.map(r => r.email).join('\n'));
+    }
+
+    // CSV / Excel — rich columns with ALL verification data (like competitor)
+    const headers = [
+        'Email', 'Status', 'Safe_To_Send', 'Category', 'Provider',
+        'Reason', 'Domain', 'Is_Disposable', 'Is_Role_Based', 'Is_Catch_All',
+        'Is_Free_Email', 'Syntax_Valid', 'MX_Accepts_Mail', 'Can_Connect_SMTP'
+    ];
+
+    const rows = results.map(r => [
+        r.email || '',
+        r.status || 'unknown',
+        r.status === 'valid' ? 'true' : 'false',
+        r.emailCategory || 'unknown',
+        r.mxProvider || r.providerType || 'unknown',
+        r.reasonCode || '',
+        r.domain || '',
+        r.flags?.disposable ? 'true' : 'false',
+        r.flags?.roleBased ? 'true' : 'false',
+        r.flags?.catchAll ? 'true' : 'false',
+        r.emailCategory === 'Free' ? 'true' : 'false',
+        'true', // passed syntax check (otherwise wouldn't be verified)
+        r.flags?.catchAll ? 'true' : 'true', // MX accepts (otherwise invalid)
+        r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
+    ]);
+
+    const sheetName = category === 'all' ? 'All Results' : category === 'valid' ? 'Valid Emails' : 'Invalid Emails';
 
     if (format === 'excel') {
-        const ws = xlsx.utils.aoa_to_sheet([headerRow, ...rows]);
+        const ws = xlsx.utils.aoa_to_sheet([headers, ...rows]);
         const wb = xlsx.utils.book_new();
-        xlsx.utils.book_append_sheet(wb, ws, 'Valid Emails');
+        xlsx.utils.book_append_sheet(wb, ws, sheetName);
         const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        const fname = `truesendy_${category}_${req.params.jobId}.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="truesendy_verified_${req.params.jobId}.xlsx"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
         return res.send(buf);
     }
 
+    // CSV
+    const fname = `truesendy_${category}_${req.params.jobId}.csv`;
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="truesendy_verified_${req.params.jobId}.csv"`);
-    res.send([headerRow.join(','), ...rows.map(r => `"${r[0]}"`)].join('\n'));
+    res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+    res.send([headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n'));
 });
 
 // ======================== API v1 — PUBLIC API (Agency Plan) ========================

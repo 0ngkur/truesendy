@@ -236,6 +236,9 @@ nav{
 }
 .results-body{padding:24px 28px}
 .download-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.cat-btn{padding:8px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.cat-btn:hover{border-color:var(--blue);color:var(--blue)}
+.cat-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn-dl{
   display:flex;align-items:center;justify-content:center;gap:8px;
   border:1px solid var(--border2);background:var(--surface2);
@@ -425,7 +428,7 @@ nav{
     <div class="results-header">
       <div>
         <div class="results-title">✅ Verification Complete</div>
-        <div style="font-size:14px;color:var(--text3);margin-top:4px">Only valid emails included in your download</div>
+        <div style="font-size:14px;color:var(--text3);margin-top:4px">Choose what to download:</div>
       </div>
       <div style="text-align:right">
         <div class="results-count" id="res-valid-count">0</div>
@@ -433,6 +436,18 @@ nav{
       </div>
     </div>
     <div class="results-body">
+      <!-- Category selector -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="cat-btn active" data-cat="valid" onclick="selectCategory('valid')">
+          ✅ Valid Only (<span id="cat-valid">0</span>)
+        </button>
+        <button class="cat-btn" data-cat="invalid" onclick="selectCategory('invalid')">
+          ❌ Invalid Only (<span id="cat-invalid">0</span>)
+        </button>
+        <button class="cat-btn" data-cat="all" onclick="selectCategory('all')">
+          📋 All Results (<span id="cat-all">0</span>)
+        </button>
+      </div>
       <div class="download-grid">
         <button class="btn-dl primary" id="dl-csv">
           <span class="emoji">📥</span> Download CSV
@@ -444,7 +459,7 @@ nav{
           <span class="emoji">📊</span> Download Excel
         </button>
       </div>
-      <div class="preview-label">Preview — valid emails in your list</div>
+      <div class="preview-label" id="preview-label">Preview — valid emails in your list</div>
       <div class="email-preview" id="email-preview"></div>
       <button class="btn-new" id="btn-new-check">↺ Check another list</button>
     </div>
@@ -692,10 +707,17 @@ function pollJob() {
         if (d.valid > 0) {
           showResults(d.valid, d.processed);
         } else {
-          toast('No valid emails found in this list.', 'error');
+          toast('No valid emails found in this list. Download invalid only.', 'error');
           document.getElementById('progress-section').classList.remove('show');
-          resetBtn();
+          // Still show results so users can download invalid
+          showResults(0, d.processed);
         }
+        // Update category counts
+        const invalidCount = (d.invalid || 0);
+        const allCount = d.processed || 0;
+        const vc = document.getElementById('cat-valid');  if (vc) vc.textContent = d.valid || 0;
+        const ic = document.getElementById('cat-invalid'); if (ic) ic.textContent = invalidCount;
+        const ac = document.getElementById('cat-all');     if (ac) ac.textContent = allCount;
         checkCredits(); // Refresh credit display
       }
     } catch {}
@@ -743,12 +765,23 @@ async function showResults(validCount, total) {
   document.getElementById('dl-excel').onclick = () => downloadResult('excel');
 }
 
+// Category selector state
+let downloadCategory = 'valid';
+
+function selectCategory(cat) {
+  downloadCategory = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.cat-btn[data-cat="${cat}"]`).classList.add('active');
+  const labels = { valid: 'valid emails', invalid: 'invalid emails', all: 'all results' };
+  document.getElementById('preview-label').textContent = `Preview — ${labels[cat]}`;
+}
+
 async function downloadResult(fmt) {
   if (!finalJobId) return;
   const fmtMap = { csv:'csv', txt:'txt', excel:'excel' };
   const extMap = { csv:'csv', txt:'txt', excel:'xlsx' };
   try {
-    const r = await fetch('/api/download/' + finalJobId + '?format=' + fmtMap[fmt], {
+    const r = await fetch('/api/download/' + finalJobId + '?format=' + fmtMap[fmt] + '&category=' + downloadCategory, {
       headers: { Authorization: 'Bearer ' + token }
     });
     if (!r.ok) { toast('Download failed', 'error'); return; }
