@@ -243,13 +243,23 @@ function resetStats() {
     $('st-total').textContent = currentEmails.length.toLocaleString();
     $('st-valid').textContent = '0'; $('st-invalid').textContent = '0'; $('st-skipped').textContent = '0';
     $('progress').style.width = '0%';
+    $('progress-pct').textContent = '0%';
+    const ev=$('ec-valid'); if(ev) ev.textContent='0';
+    const ei=$('ec-invalid'); if(ei) ei.textContent='0';
+    const ea=$('ec-all'); if(ea) ea.textContent='0';
     $('results-table').innerHTML = '<div class="empty">Verifying…</div>';
 }
 function renderProgress(done, total, valid, invalid, skipped) {
-    $('progress').style.width = (done / total * 100) + '%';
+    const pct = Math.round(done / total * 100);
+    $('progress').style.width = pct + '%';
+    $('progress-pct').textContent = pct + '%';
     $('st-valid').textContent = valid.toLocaleString();
     $('st-invalid').textContent = invalid.toLocaleString();
     $('st-skipped').textContent = skipped.toLocaleString();
+    // Update category counts
+    const ev = $('ec-valid');   if (ev) ev.textContent = valid;
+    const ei = $('ec-invalid'); if (ei) ei.textContent = invalid;
+    const ea = $('ec-all');     if (ea) ea.textContent = done;
     // render the latest N results into the table
     const recent = lastResults.slice(-200);
     const rows = recent.map(r => `<tr class="${r.status === 'valid' ? 'valid' : 'invalid'}"><td>${esc(r.email)}</td><td><span class="pill ${r.status === 'valid' ? 'valid' : 'invalid'}">${r.status}</span></td><td>${esc(r.reason || r.provider || '')}</td></tr>`).join('');
@@ -257,11 +267,33 @@ function renderProgress(done, total, valid, invalid, skipped) {
 }
 function esc(s) { return String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-// ── export valid emails ──────────────────────────────────────────────────────
+// ── category selector for export ──────────────────────────────────────────────
+let exportCategory = 'valid';
+function selectCatElec(cat) {
+    exportCategory = cat;
+    document.querySelectorAll('.cat-btn-electron').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.cat-btn-electron[data-cat="${cat}"]`).classList.add('active');
+}
+
+// ── export emails by category ─────────────────────────────────────────────────
 $('export-btn').addEventListener('click', async () => {
-    const valid = lastResults.filter(r => r.status === 'valid').map(r => r.email);
-    if (!valid.length) return;
-    const csv = 'Email\n' + valid.map(e => '"' + e + '"').join('\n');
-    const r = await window.ts.saveExport('truesendy_valid_emails.csv', csv);
-    if (!r.canceled) $('file-info').innerHTML = '<span style="color:var(--green)">✓ Saved ' + valid.length + ' valid emails to ' + shortPath(r.filePath) + '</span>';
+    let results;
+    if (exportCategory === 'all') results = lastResults;
+    else if (exportCategory === 'invalid') results = lastResults.filter(r => r.status !== 'valid');
+    else results = lastResults.filter(r => r.status === 'valid');
+    if (!results.length) return;
+    // Rich CSV with 14 columns (like the web version)
+    const headers = ['Email','Status','Safe_To_Send','Category','Provider','Reason','Domain','Is_Disposable','Is_Role_Based','Is_Catch_All'];
+    const rows = results.map(r => [
+        r.email || '', r.status || 'unknown',
+        r.status === 'valid' ? 'true' : 'false',
+        r.category || '', r.provider || '', r.reason || '',
+        (r.email||'').split('@')[1] || '',
+        r.flags?.disposable ? 'true' : 'false',
+        r.flags?.roleBased ? 'true' : 'false',
+        r.flags?.catchAll ? 'true' : 'false'
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+    const r = await window.ts.saveExport(`truesendy_${exportCategory}.csv`, csv);
+    if (!r.canceled) $('file-info').innerHTML = '<span style="color:var(--green)">✓ Saved ' + results.length + ' ' + exportCategory + ' emails to ' + shortPath(r.filePath) + '</span>';
 });

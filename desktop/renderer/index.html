@@ -86,10 +86,18 @@
         <div class="stat bad"><div class="stat-num" id="st-invalid">0</div><div class="stat-lbl">Invalid</div></div>
         <div class="stat skip"><div class="stat-num" id="st-skipped">0</div><div class="stat-lbl">Skipped</div></div>
       </div>
-      <div class="progress-wrap"><div id="progress" class="progress-bar" style="width:0%"></div></div>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+        <div class="progress-wrap" style="flex:1"><div id="progress" class="progress-bar" style="width:0%"></div></div>
+        <span id="progress-pct" style="font-size:1.1rem;font-weight:800;color:var(--blue-600);min-width:48px;text-align:right">0%</span>
+      </div>
+      <div style="display:flex;gap:.4rem;margin-bottom:.5rem;flex-wrap:wrap">
+        <button class="cat-btn-electron active" data-cat="valid" onclick="selectCatElec('valid')">✅ Valid (<span id="ec-valid">0</span>)</button>
+        <button class="cat-btn-electron" data-cat="invalid" onclick="selectCatElec('invalid')">❌ Invalid (<span id="ec-invalid">0</span>)</button>
+        <button class="cat-btn-electron" data-cat="all" onclick="selectCatElec('all')">📋 All (<span id="ec-all">0</span>)</button>
+      </div>
       <div class="results-head">
         <div class="results-title">Results</div>
-        <button id="export-btn" class="btn-ghost" disabled>Export valid ↓</button>
+        <button id="export-btn" class="btn-ghost" disabled>Export ↓</button>
       </div>
       <div id="results-table" class="results-table"><div class="empty">Upload a file and verify to see results.</div></div>
     </section>
