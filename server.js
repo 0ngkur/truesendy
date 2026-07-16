@@ -267,20 +267,39 @@ Object.entries(PAGE_FILES).forEach(([route, fp]) => {
 
 // ======================== DOWNLOADS ========================
 
-// ── Premium-gated bot download ───────────────────────────────────────────────
-// The exe is NOT served as a public static file. Requires ?token=<jwt> of a
-// PUBLIC download — anyone can get the bot (standard SaaS pattern: download freely,
-// sign in inside the app). Optionally count the download if a token is present.
+// ── Agency-gated bot download ────────────────────────────────────────────────
+// The bot (desktop exe + CLI) is an ULTRA PREMIUM feature. Only Agency plan
+// subscribers can download it. Requires ?token=<jwt> of an authenticated
+// Agency-plan user. Non-Agency users get redirected to the upgrade page.
 function serveBotExe(req, res, filePath, filename) {
-    // Optional: count the download for the user if they're logged in
     const token = (req.query.token || '').toString();
-    if (token) {
-        try {
-            const jwtLib = require('jsonwebtoken');
-            const userId = jwtLib.verify(token, JWT_SECRET, { algorithms: ['HS256'] }).id;
-            store.markBotDownloaded(userId);
-        } catch { /* not logged in — that's fine, download is public */ }
+
+    // ── Auth required: validate the JWT ──
+    if (!token) {
+        return res.redirect(302, '/signin?next=' + encodeURIComponent(req.path));
     }
+
+    let userId = null;
+    try {
+        const jwtLib = require('jsonwebtoken');
+        userId = jwtLib.verify(token, JWT_SECRET, { algorithms: ['HS256'] }).id;
+    } catch {
+        // Invalid / expired token → redirect to sign in
+        return res.redirect(302, '/signin?next=' + encodeURIComponent(req.path));
+    }
+
+    // ── Plan check: Agency required ──
+    const user = store.findUserById(userId);
+    if (!user) {
+        return res.redirect(302, '/signin?next=' + encodeURIComponent(req.path));
+    }
+    if (user.plan !== 'agency') {
+        // Logged in but not Agency → send to the agency upgrade page
+        return res.redirect(302, '/subscribePlan?need=agency');
+    }
+
+    // ── Agency user — serve the file ──
+    store.markBotDownloaded(userId);
     settings.incBotDownload();
 
     if (!fs.existsSync(filePath)) {
@@ -331,6 +350,17 @@ fetchExeOnBoot();
 
 app.get('/downloads/TrueSendy.exe',       (req, res) => serveBotExe(req, res, path.join(__dirname, 'dist',      'TrueSendy.exe'),       'TrueSendy.exe'));
 app.get('/downloads/TrueSendy-Setup.exe', (req, res) => serveBotExe(req, res, path.join(__dirname, 'downloads', 'TrueSendy-Setup.exe'), 'TrueSendy-Setup.exe'));
+
+// Check whether the current user can download the bot (Agency plan required).
+// Used by downloads.html to decide which UI to show.
+app.get('/api/download-eligibility', authMiddleware, (req, res) => {
+    const canDownload = req.user.plan === 'agency';
+    res.json({
+        canDownload,
+        plan: req.user.plan || 'free',
+        needPlan: canDownload ? null : 'agency',
+    });
+});
 
 // Legacy download route
 app.get('/download/truesendy-cli', (req, res) => res.redirect(301, '/downloads/TrueSendy.exe'));

@@ -412,11 +412,12 @@
                         <span class="free-pill">100K verifications/key</span>
                     </div>
                 </div>
-                <div>
-                    <a href="/downloads/TrueSendy-Setup.exe" class="sub-btn sub-btn-primary" style="white-space:nowrap;width:auto;padding:0.95rem 2rem;">Download Installer</a>
-                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;text-align:center;">TrueSendy Setup 1.1.0.exe</p>
+                <div id="dl-zone">
+                    <!-- Filled by JS based on auth + Agency plan -->
+                    <div id="dl-loading" style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:1rem 0">Checking access…</div>
                 </div>
             </div>
+            <div id="dl-notice" style="display:none;text-align:center;margin-top:1rem;padding:0.8rem 1.2rem;border-radius:12px;font-size:0.85rem;font-weight:600"></div>
         </div>
 
         <div class="sub-grid">
@@ -453,7 +454,7 @@
                     <li><span class="feat-check">✓</span> CSV, Excel, TXT export formats</li>
                     <li><span class="feat-check">✓</span> Credit balance always visible</li>
                 </ul>
-                <a href="/downloads/TrueSendy-Setup.exe" class="sub-btn sub-btn-outline">Download Now</a>
+                <a href="#" id="dl-secondary" class="sub-btn sub-btn-outline" onclick="return tryDownload(event)">Download Now</a>
             </div>
         </div>
 
@@ -567,10 +568,72 @@
             }
         })();
 
-        // ── Public bot download (standard SaaS pattern) ──────────────────────
-        // Anyone can download the bot. Sign in / create account happens INSIDE
-        // the app after install. No tokens = no verification (enforced server-side).
-        // No gating JS needed — download links work directly.
+        // ── Agency-gated bot download ──────────────────────────────────────
+        // The bot is an ultra-premium feature. Only Agency plan subscribers
+        // can download it. Non-Agency users see an upgrade prompt.
+        let dlToken = null, dlCanDownload = false;
+
+        (async function checkDownloadAccess() {
+            const zone = document.getElementById('dl-zone');
+            const notice = document.getElementById('dl-notice');
+            const token = localStorage.getItem('ts_token');
+
+            if (!token) {
+                // Not logged in
+                zone.innerHTML = '<div style="text-align:center">' +
+                    '<a href="/signin?next=/downloads" class="sub-btn sub-btn-primary" style="width:auto;padding:0.95rem 2rem;">Sign In to Download</a>' +
+                    '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Agency plan required</p>' +
+                    '</div>';
+                showNotice('🔒 The bot is an ultra-premium feature. Sign in with an Agency plan account to download.', '#fef3c7', '#92400e');
+                return;
+            }
+
+            try {
+                const r = await fetch('/api/download-eligibility', {
+                    headers: { Authorization: 'Bearer ' + token }
+                }).then(r => r.json());
+
+                dlToken = token;
+                dlCanDownload = r.canDownload;
+
+                if (r.canDownload) {
+                    // Agency user — show download buttons with token
+                    zone.innerHTML = '<a href="/downloads/TrueSendy-Setup.exe?token=' + encodeURIComponent(token) + '" class="sub-btn sub-btn-primary" style="white-space:nowrap;width:auto;padding:0.95rem 2rem;">⬇ Download Installer</a>' +
+                        '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;text-align:center;">TrueSendy Setup 1.1.0.exe · Agency access ✓</p>';
+                    showNotice('✅ Agency plan active — downloads unlocked!', '#d1fae5', '#065f46');
+                } else {
+                    // Logged in but not Agency
+                    zone.innerHTML = '<div style="text-align:center">' +
+                        '<a href="/subscribePlan?plan=agency" class="sub-btn sub-btn-primary" style="width:auto;padding:0.95rem 2rem;">Upgrade to Agency</a>' +
+                        '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Current plan: ' + (r.plan || 'free') + '</p>' +
+                        '</div>';
+                    showNotice('🔒 The bot requires the Agency plan (ultra premium). Upgrade to unlock downloads.', '#fef3c7', '#92400e');
+                }
+            } catch {
+                zone.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.85rem">Could not verify access. <a href="/signin?next=/downloads" style="color:var(--blue)">Sign in</a></div>';
+            }
+        })();
+
+        function showNotice(msg, bg, color) {
+            const n = document.getElementById('dl-notice');
+            n.textContent = msg;
+            n.style.background = bg;
+            n.style.color = color;
+            n.style.display = 'block';
+        }
+
+        // Secondary download button (features card) — gate it too
+        function tryDownload(e) {
+            e.preventDefault();
+            if (dlCanDownload && dlToken) {
+                    window.location.href = '/downloads/TrueSendy-Setup.exe?token=' + encodeURIComponent(dlToken);
+                } else if (dlToken) {
+                    window.location.href = '/subscribePlan?plan=agency';
+                } else {
+                    window.location.href = '/signin?next=/downloads';
+                }
+            return false;
+        }
     </script>
 </body>
 </html>
