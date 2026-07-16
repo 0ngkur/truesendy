@@ -944,32 +944,54 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     const origCols = hasOrig ? job.originalColumns : [];
     const origLookup = job.originalData || {};
 
-    const verifHeaders = [
-        'Email', 'Status', 'Safe_To_Send', 'Category', 'Provider',
-        'Reason', 'Domain', 'Is_Disposable', 'Is_Role_Based', 'Is_Catch_All',
-        'Is_Free_Email', 'Syntax_Valid', 'MX_Accepts_Mail', 'Can_Connect_SMTP'
-    ];
+    // Avoid duplicate "Email" column: if the original file already has an email
+    // column (case-insensitive), drop it from the verification headers.
+    const origHasEmail = origCols.some(c => /^e-?mail$/i.test(c));
+    const verifHeaders = origHasEmail
+        ? ['Status', 'Safe_To_Send', 'Category', 'Provider', 'Reason', 'Domain',
+           'Is_Disposable', 'Is_Role_Based', 'Is_Catch_All', 'Is_Free_Email',
+           'Syntax_Valid', 'MX_Accepts_Mail', 'Can_Connect_SMTP']
+        : ['Email', 'Status', 'Safe_To_Send', 'Category', 'Provider', 'Reason',
+           'Domain', 'Is_Disposable', 'Is_Role_Based', 'Is_Catch_All',
+           'Is_Free_Email', 'Syntax_Valid', 'MX_Accepts_Mail', 'Can_Connect_SMTP'];
+
     const headers = [...origCols, ...verifHeaders];
 
     const rows = results.map(r => {
         const orig = origLookup[r.email] || {};
         const origVals = origCols.map(c => orig[c] !== undefined ? String(orig[c]) : '');
-        const verifVals = [
-            r.email || '',
-            r.status || 'unknown',
-            r.status === 'valid' ? 'true' : 'false',
-            r.emailCategory || 'unknown',
-            r.mxProvider || r.providerType || 'unknown',
-            r.reasonCode || '',
-            r.domain || '',
-            r.flags?.disposable ? 'true' : 'false',
-            r.flags?.roleBased ? 'true' : 'false',
-            r.flags?.catchAll ? 'true' : 'false',
-            r.emailCategory === 'Free' ? 'true' : 'false',
-            'true',
-            'true',
-            r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
-        ];
+        const verifVals = origHasEmail
+            ? [
+                r.status || 'unknown',
+                r.status === 'valid' ? 'true' : 'false',
+                r.emailCategory || 'unknown',
+                r.mxProvider || r.providerType || 'unknown',
+                r.reasonCode || '',
+                r.domain || '',
+                r.flags?.disposable ? 'true' : 'false',
+                r.flags?.roleBased ? 'true' : 'false',
+                r.flags?.catchAll ? 'true' : 'false',
+                r.emailCategory === 'Free' ? 'true' : 'false',
+                'true',
+                'true',
+                r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
+            ]
+            : [
+                r.email || '',
+                r.status || 'unknown',
+                r.status === 'valid' ? 'true' : 'false',
+                r.emailCategory || 'unknown',
+                r.mxProvider || r.providerType || 'unknown',
+                r.reasonCode || '',
+                r.domain || '',
+                r.flags?.disposable ? 'true' : 'false',
+                r.flags?.roleBased ? 'true' : 'false',
+                r.flags?.catchAll ? 'true' : 'false',
+                r.emailCategory === 'Free' ? 'true' : 'false',
+                'true',
+                'true',
+                r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
+            ];
         return [...origVals, ...verifVals];
     });
 
