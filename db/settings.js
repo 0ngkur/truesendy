@@ -24,6 +24,14 @@ const DEFAULTS = {
         validityDays: 30,       // key expires after this many days
         currency:     'usd',
     },
+    packages: [
+        { id: 'starter',  name: 'Starter',  tokens: 1000,   priceUsd: 1.99,  perEmail: '$0.0020', popular: false },
+        { id: 'basic',    name: 'Basic',    tokens: 5000,   priceUsd: 6.99,  perEmail: '$0.0014', popular: false },
+        { id: 'standard', name: 'Standard', tokens: 10000,  priceUsd: 11.99, perEmail: '$0.0012', popular: true  },
+        { id: 'growth',   name: 'Growth',   tokens: 25000,  priceUsd: 24.99, perEmail: '$0.0010', popular: false },
+        { id: 'pro',      name: 'Pro',      tokens: 50000,  priceUsd: 39.99, perEmail: '$0.0008', popular: false },
+        { id: 'ultimate', name: 'Ultimate', tokens: 100000, priceUsd: 49,    perEmail: '$0.00049', popular: false },
+    ],
     stats: {
         botDownloads: 0,        // total gated exe downloads (incremented per successful download)
     },
@@ -90,6 +98,16 @@ function getKeyProduct() {
     return load().keyProduct;
 }
 
+// ── Credit packages (6 preset tiers) ──
+function getPackages() {
+    const pkgs = load().packages;
+    return Array.isArray(pkgs) && pkgs.length ? pkgs : DEFAULTS.packages;
+}
+
+function getPackage(id) {
+    return getPackages().find(p => p.id === id) || null;
+}
+
 function setKeyProduct({ priceUsd, tokens, validityDays } = {}) {
     const data = load();
     if (typeof priceUsd === 'number' && isFinite(priceUsd) && priceUsd >= 0) {
@@ -145,6 +163,8 @@ module.exports = {
     setStripeKeys,
     getKeyProduct,
     setKeyProduct,
+    getPackages,
+    getPackage,
     getMaskedSettings,
     incBotDownload,
     getBotDownloads,

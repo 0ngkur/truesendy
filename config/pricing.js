@@ -136,12 +136,17 @@ function constructEvent(rawBody, signature) {
 // Distinct from createCheckoutSession (which sells plan subscriptions): a key
 // purchase is a single product at the boss-configured price, and the webhook
 // uses metadata.type === 'key_purchase' to know it must mint + email a key.
-async function createKeyCheckoutSession(successUrl, cancelUrl, customerEmail, userId) {
+async function createKeyCheckoutSession(successUrl, cancelUrl, customerEmail, userId, pkg) {
     const stripe = getStripe();
     if (!stripe) return { error: 'Stripe not configured' };
 
-    const settings = require('../db/settings');
-    const product  = settings.getKeyProduct();
+    const settings  = require('../db/settings');
+    const product   = settings.getKeyProduct();
+
+    // If a package override is passed, use its price/tokens; otherwise fall back to keyProduct.
+    const pkgTokens = pkg ? Number(pkg.tokens) : product.tokens;
+    const pkgPrice  = pkg ? Number(pkg.priceUsd) : product.priceUsd;
+    const pkgName   = pkg ? pkg.name : '';
 
     try {
         const session = await stripe.checkout.sessions.create({
@@ -153,10 +158,10 @@ async function createKeyCheckoutSession(successUrl, cancelUrl, customerEmail, us
                 price_data: {
                     currency: product.currency || 'usd',
                     product_data: {
-                        name: `TrueSendy Verification Key — ${product.tokens.toLocaleString()} emails`,
-                        description: `One API key. Verifies up to ${product.tokens.toLocaleString()} emails. Valid ${product.validityDays} days.`,
+                        name: `TrueSendy Verification Key — ${pkgTokens.toLocaleString()} emails${pkgName ? ' (' + pkgName + ')' : ''}`,
+                        description: `One API key. Verifies up to ${pkgTokens.toLocaleString()} emails. Valid ${product.validityDays} days.`,
                     },
-                    unit_amount: Math.round(product.priceUsd * 100), // cents
+                    unit_amount: Math.round(pkgPrice * 100), // cents
                 },
                 quantity: 1,
             }],
@@ -166,7 +171,8 @@ async function createKeyCheckoutSession(successUrl, cancelUrl, customerEmail, us
                 type:   'key_purchase',
                 userId: userId || '',
                 email:  customerEmail || '',
-                tokens: String(product.tokens),
+                tokens: String(pkgTokens),
+                price:  String(pkgPrice),
             },
         });
         return { sessionId: session.id, url: session.url };

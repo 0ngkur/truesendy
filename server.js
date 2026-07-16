@@ -154,19 +154,20 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 
             if (meta.type === 'key_purchase') {
                 // ── Key sale (guest checkout): find-or-create the buyer by email,
-                // credit the boss-configured token allowance, mint a key, email it. ──
+                // credit the purchased token allowance (from metadata), mint a key, email it. ──
                 const email = meta.email;
                 if (!email) {
                     console.warn('[TrueSendy] Webhook key_purchase: no email in metadata');
                 } else {
+                    const product  = settings.getKeyProduct();
+                    const purchased = Number(meta.tokens) || product.tokens; // amount paid for
                     const user   = store.findOrCreateKeyBuyer(email);
-                    const result = store.purchaseApiKey(user.id);
+                    const result = store.purchaseApiKey(user.id, purchased);
                     if (result.error) {
                         console.error(`[TrueSendy] Webhook key_purchase failed for ${email}: ${result.error}`);
                     } else {
-                        const product = settings.getKeyProduct();
-                        await sendApiKeyEmail(email, result.apiKey.key, product.tokens, product.validityDays);
-                        console.log(`[TrueSendy] Webhook: key delivered to ${email} (${product.tokens} tokens)`);
+                        await sendApiKeyEmail(email, result.apiKey.key, purchased, product.validityDays);
+                        console.log(`[TrueSendy] Webhook: key delivered to ${email} (${purchased} tokens)`);
                     }
                 }
             } else if (meta.plan && ['starter', 'pro', 'agency'].includes(meta.plan)) {
@@ -1075,17 +1076,34 @@ app.get('/api/key-price', (req, res) => {
     });
 });
 
+// Returns the 6 preset credit packages for the checkout page.
+app.get('/api/packages', (req, res) => {
+    res.json({
+        packages:         settings.getPackages(),
+        validityDays:     settings.getKeyProduct().validityDays,
+        stripeConfigured: pricing.isStripeConfigured(),
+    });
+});
+
 // [SUPERSEDED — kept for logged-in buyers] The public /key → /checkout flow now uses
 // /api/keys/guest-checkout (no login). This route still works for an authenticated user.
 app.post('/api/keys/purchase-checkout', authMiddleware, async (req, res) => {
     const origin = req.headers.origin || `http://localhost:${PORT}`;
+    const { packageId } = req.body || {};
+
+    // Resolve selected package (null = default keyProduct)
+    const pkg = packageId ? settings.getPackage(packageId) : null;
+    if (packageId && !pkg) {
+        return res.status(400).json({ error: 'Invalid package selected.' });
+    }
 
     if (pricing.isStripeConfigured()) {
         const result = await pricing.createKeyCheckoutSession(
             `${origin}/key?success=1`,
             `${origin}/key?canceled=1`,
             req.user.email,
-            req.user.id
+            req.user.id,
+            pkg
         );
         if (result.error) return res.status(400).json(result);
         return res.json({ checkoutUrl: result.url, sessionId: result.sessionId });
@@ -1097,15 +1115,16 @@ app.post('/api/keys/purchase-checkout', authMiddleware, async (req, res) => {
         return res.status(503).json({ error: 'Payments are not configured on this server. Please contact support.' });
     }
 
-    const result = store.purchaseApiKey(req.user.id);
-    if (result.error) return res.status(400).json(result);
     const product = settings.getKeyProduct();
-    await sendApiKeyEmail(req.user.email, result.apiKey.key, product.tokens, product.validityDays);
+    const tokens  = pkg ? Number(pkg.tokens) : product.tokens;
+    const result = store.purchaseApiKey(req.user.id, tokens);
+    if (result.error) return res.status(400).json(result);
+    await sendApiKeyEmail(req.user.email, result.apiKey.key, tokens, product.validityDays);
     res.json({
         devMode: true,
         message: 'Dev mode — key created without payment.',
         key: result.apiKey.key,
-        tokens: product.tokens,
+        tokens,
         validityDays: product.validityDays,
     });
 });
@@ -1115,19 +1134,26 @@ app.post('/api/keys/purchase-checkout', authMiddleware, async (req, res) => {
 // payment and emails the key. find-or-create handles the account so the unified
 // token balance still backs the key.
 app.post('/api/keys/guest-checkout', async (req, res) => {
-    const { email } = req.body || {};
+    const { email, packageId } = req.body || {};
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
         return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
     const cleanEmail = String(email).toLowerCase().trim();
     const origin = req.headers.origin || `http://localhost:${PORT}`;
 
+    // Resolve the selected package (falls back to default 100k if none specified)
+    const pkg = packageId ? settings.getPackage(packageId) : null;
+    if (packageId && !pkg) {
+        return res.status(400).json({ error: 'Invalid package selected.' });
+    }
+
     if (pricing.isStripeConfigured()) {
         const result = await pricing.createKeyCheckoutSession(
             `${origin}/checkout?success=1&email=${encodeURIComponent(cleanEmail)}`,
             `${origin}/checkout?canceled=1`,
             cleanEmail,
-            null                      // no userId — guest purchase; webhook keys on email
+            null,                     // no userId — guest purchase; webhook keys on email
+            pkg                       // package override (null = use default keyProduct)
         );
         if (result.error) return res.status(400).json(result);
         return res.json({ checkoutUrl: result.url, sessionId: result.sessionId });
@@ -1138,10 +1164,11 @@ app.post('/api/keys/guest-checkout', async (req, res) => {
         return res.status(503).json({ error: 'Payments are not configured on this server. Please contact support.' });
     }
     const user   = store.findOrCreateKeyBuyer(cleanEmail);
-    const result = store.purchaseApiKey(user.id);
+    const result = store.purchaseApiKey(user.id, pkg ? Number(pkg.tokens) : undefined);
     if (result.error) return res.status(400).json(result);
     const product = settings.getKeyProduct();
-    await sendApiKeyEmail(cleanEmail, result.apiKey.key, product.tokens, product.validityDays);
+    const tokens  = pkg ? Number(pkg.tokens) : product.tokens;
+    await sendApiKeyEmail(cleanEmail, result.apiKey.key, tokens, product.validityDays);
     res.json({ devMode: true, message: `Dev mode — key created and emailed to ${cleanEmail} (printed to server console).` });
 });
 

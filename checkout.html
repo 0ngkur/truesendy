@@ -25,6 +25,17 @@
         .co-price { margin-top:0.75rem; font-family:'Outfit',sans-serif; font-size:1.05rem; color:#334155; }
         .co-price strong { color:#0f172a; font-size:1.9rem; font-weight:900; vertical-align:-2px; }
         .co-price-once { font-size:0.78rem; color:#64748b; }
+        .co-pkg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.6rem; margin-bottom:1.5rem; }
+        .co-pkg { position:relative; background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:0.9rem 0.5rem; text-align:center; cursor:pointer; transition:all 0.18s; }
+        .co-pkg:hover { border-color:#93c5fd; transform:translateY(-2px); }
+        .co-pkg.selected { border-color:#2563eb; background:rgba(59,130,246,0.06); box-shadow:0 6px 20px rgba(37,99,235,0.15); }
+        .co-pkg-tokens { font-family:'JetBrains Mono',monospace; font-size:1.05rem; font-weight:800; color:#0f172a; line-height:1.1; }
+        .co-pkg-price { font-family:'Outfit',sans-serif; font-size:1.3rem; font-weight:900; color:#1d4ed8; margin:0.2rem 0; }
+        .co-pkg-per { font-size:0.65rem; color:#94a3b8; font-weight:600; }
+        .co-pkg-badge { position:absolute; top:-8px; left:50%; transform:translateX(-50%); background:#f59e0b; color:#fff; font-size:0.6rem; font-weight:800; padding:1px 7px; border-radius:999px; letter-spacing:0.5px; text-transform:uppercase; white-space:nowrap; }
+        .co-sel-info { background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:0.8rem 1rem; margin-bottom:1.2rem; display:flex; align-items:center; justify-content:space-between; }
+        .co-sel-tokens { font-weight:700; color:#0f172a; font-size:0.9rem; }
+        .co-sel-price { font-family:'Outfit',sans-serif; font-weight:900; font-size:1.5rem; color:#1d4ed8; }
         .co-field { margin-bottom:1rem; }
         .co-label { display:block; font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:0.4rem; }
         .co-input { width:100%; padding:0.85rem 1rem; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:'Inter',sans-serif; color:#0f172a; background:#fff; outline:none; transition:border-color 0.2s, box-shadow 0.2s; box-sizing:border-box; }
@@ -63,10 +74,15 @@
             <div class="co-banner err" id="banner-canceled">Payment canceled — no charge was made. Try again whenever you're ready.</div>
             <div class="co-banner err" id="banner-error"></div>
 
-            <div class="co-priceblock">
-                <div class="co-tokens" id="co-tokens">100,000</div>
-                <div class="co-tokens-label">Email verifications per key</div>
-                <div class="co-price"><strong>$<span id="co-price">49</span></strong><div class="co-price-once">one-time payment · key valid <span id="co-days">30</span> days</div></div>
+            <div class="co-label" style="margin-bottom:0.5rem">Choose your package</div>
+            <div class="co-pkg-grid" id="pkg-grid"><!-- packages injected by JS --></div>
+
+            <div class="co-sel-info">
+                <div>
+                    <div class="co-sel-tokens" id="sel-tokens">100,000 verifications</div>
+                    <div style="font-size:0.72rem;color:#64748b;margin-top:2px">key valid <span id="co-days">30</span> days · one-time payment</div>
+                </div>
+                <div class="co-sel-price">$<span id="sel-price">49</span></div>
             </div>
 
             <div class="co-field">
@@ -82,7 +98,7 @@
     </div>
 
     <script>
-        let priceUsd = 49, tokens = 100000, days = 30;
+        let packages = [], selectedPkg = null, days = 30;
         const params = new URLSearchParams(location.search);
 
         // success / canceled banners
@@ -94,17 +110,50 @@
         }
         if (params.get('canceled') === '1') document.getElementById('banner-canceled').classList.add('show');
 
-        // load price + allowance from the boss-configured key product
+        // load packages from the server
         (async () => {
             try {
-                const r = await fetch('/api/key-price').then(r => r.json());
-                priceUsd = r.priceUsd ?? priceUsd; tokens = r.tokens ?? tokens; days = r.validityDays ?? days;
-                document.getElementById('co-tokens').textContent = Number(tokens).toLocaleString();
-                document.getElementById('co-price').textContent = priceUsd;
-                document.getElementById('co-price-btn').textContent = priceUsd;
+                const r = await fetch('/api/packages').then(r => r.json());
+                days = r.validityDays || 30;
                 document.getElementById('co-days').textContent = days;
-            } catch (_) {}
+                packages = (r.packages && r.packages.length) ? r.packages : [
+                    { id:'ultimate', name:'Ultimate', tokens:100000, priceUsd:49, perEmail:'$0.00049' }
+                ];
+                renderPackages();
+            } catch (_) {
+                // fallback to single product
+                packages = [{ id:'ultimate', name:'Ultimate', tokens:100000, priceUsd:49, perEmail:'$0.00049' }];
+                renderPackages();
+            }
         })();
+
+        function renderPackages() {
+            const grid = document.getElementById('pkg-grid');
+            grid.innerHTML = packages.map(p => `
+                <div class="co-pkg" data-id="${p.id}" onclick="selectPkg('${p.id}')">
+                    ${p.popular ? '<span class="co-pkg-badge">★ Popular</span>' : ''}
+                    <div class="co-pkg-tokens">${Number(p.tokens).toLocaleString()}</div>
+                    <div class="co-pkg-price">$${p.priceUsd}</div>
+                    <div class="co-pkg-per">${p.perEmail || ''}/email</div>
+                </div>
+            `).join('');
+            // pre-select from URL param (?pkg=standard), or the popular package, or the last
+            const urlPkg = params.get('pkg');
+            const init = (urlPkg && packages.find(p => p.id === urlPkg))
+                || packages.find(p => p.popular)
+                || packages[packages.length - 1];
+            selectPkg(init.id);
+        }
+
+        function selectPkg(id) {
+            selectedPkg = packages.find(p => p.id === id);
+            if (!selectedPkg) return;
+            document.querySelectorAll('.co-pkg').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`.co-pkg[data-id="${id}"]`).classList.add('selected');
+            document.getElementById('sel-tokens').textContent = Number(selectedPkg.tokens).toLocaleString() + ' verifications';
+            document.getElementById('sel-price').textContent = selectedPkg.priceUsd;
+            document.getElementById('co-price-btn').textContent = selectedPkg.priceUsd;
+        }
 
         async function startCheckout() {
             const email = document.getElementById('email').value.trim();
@@ -112,6 +161,10 @@
             errBox.classList.remove('show');
             if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                 errBox.textContent = 'Please enter a valid email address.';
+                errBox.classList.add('show'); return;
+            }
+            if (!selectedPkg) {
+                errBox.textContent = 'Please select a package.';
                 errBox.classList.add('show'); return;
             }
             const btn = document.getElementById('pay-btn');
@@ -122,14 +175,13 @@
                 const r = await fetch('/api/keys/guest-checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
+                    body: JSON.stringify({ email, packageId: selectedPkg.id })
                 }).then(r => r.json());
                 if (r.error) { errBox.textContent = r.error; errBox.classList.add('show'); btn.disabled = false; btn.innerHTML = original; return; }
                 if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return; }   // → Stripe
                 if (r.devMode) {
-                    // local dev: key created + emailed (printed to server console)
                     const ok = document.getElementById('banner-success');
-                    ok.innerHTML = '✅ <strong>Dev mode</strong> — key created and emailed to <strong>' + email + '</strong> (printed to the server console).';
+                    ok.innerHTML = '✅ <strong>Dev mode</strong> — key (' + Number(selectedPkg.tokens).toLocaleString() + ' emails) created and emailed to <strong>' + email + '</strong>.';
                     ok.classList.add('show');
                     btn.textContent = '✓ Key created (dev)';
                 }

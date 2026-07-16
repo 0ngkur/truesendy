@@ -489,14 +489,16 @@ function generateApiKey(userId) {
 // Creates a brand-new key with the boss-configured token allowance and does
 // NOT revoke existing keys — a user may legitimately own several purchased
 // keys. Called by the Stripe webhook after a successful key_purchase payment.
-function purchaseApiKey(userId) {
+function purchaseApiKey(userId, overrideAmount) {
     const db = loadDB();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { error: 'User not found.' };
 
     const settings = require('./settings');
     const product  = settings.getKeyProduct();
-    const amount   = product.tokens || 100000;
+    const amount   = (typeof overrideAmount === 'number' && overrideAmount > 0)
+        ? Math.floor(overrideAmount)
+        : (product.tokens || 100000);
 
     // Credit the user's SHARED balance — these tokens are consumed by BOTH the
     // web UI and the bot (single source of truth).

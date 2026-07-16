@@ -81,6 +81,18 @@
             position:relative;
             overflow:hidden;
         }
+        .key-pkg-label { font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:0.5rem; }
+        .key-pkg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.6rem; margin-bottom:1rem; }
+        .key-pkg { position:relative; background:#fff; border:2px solid #e2e8f0; border-radius:12px; padding:0.85rem 0.4rem; text-align:center; cursor:pointer; transition:all 0.18s; }
+        .key-pkg:hover { border-color:#93c5fd; transform:translateY(-2px); }
+        .key-pkg.selected { border-color:#2563eb; background:rgba(59,130,246,0.06); box-shadow:0 6px 20px rgba(37,99,235,0.15); }
+        .key-pkg-tokens { font-family:'JetBrains Mono',monospace; font-size:0.95rem; font-weight:800; color:#0f172a; }
+        .key-pkg-price { font-family:'Outfit',sans-serif; font-size:1.2rem; font-weight:900; color:#1d4ed8; margin:0.15rem 0; }
+        .key-pkg-per { font-size:0.6rem; color:#94a3b8; font-weight:600; }
+        .key-pkg-badge { position:absolute; top:-7px; left:50%; transform:translateX(-50%); background:#f59e0b; color:#fff; font-size:0.58rem; font-weight:800; padding:1px 6px; border-radius:999px; white-space:nowrap; }
+        .key-sel-info { background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:0.8rem 1rem; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; }
+        .key-sel-tokens { font-weight:700; color:#0f172a; font-size:0.9rem; }
+        .key-sel-price { font-family:'Outfit',sans-serif; font-weight:900; font-size:1.5rem; color:#1d4ed8; }
         .key-priceblock::before {
             content:''; position:absolute; inset:0;
             background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%);
@@ -194,14 +206,15 @@
                 Payment canceled. No charge was made — try again whenever you're ready.
             </div>
 
-            <!-- price block (filled by JS) -->
-            <div class="key-priceblock">
-                <div class="key-tokens" id="kpi-tokens">100,000</div>
-                <div class="key-tokens-label">Email verifications per key</div>
-                <div class="key-price">
-                    <strong>$<span id="kpi-price">49</span></strong>
-                    <div class="key-price-once">one-time payment · key valid <span id="kpi-days">30</span> days</div>
+            <!-- package selector -->
+            <div class="key-pkg-label">Choose your package</div>
+            <div class="key-pkg-grid" id="key-pkg-grid"><!-- packages injected by JS --></div>
+            <div class="key-sel-info">
+                <div>
+                    <div class="key-sel-tokens" id="kpi-tokens">100,000 verifications</div>
+                    <div style="font-size:0.72rem;color:#64748b;margin-top:2px">key valid <span id="kpi-days">30</span> days · one-time payment</div>
                 </div>
+                <div class="key-sel-price">$<span id="kpi-price">49</span></div>
             </div>
 
             <!-- features -->
@@ -209,7 +222,7 @@
                 <li><span class="dot">✓</span> Hotmail, Outlook, Gmail, corporate & business inboxes</li>
                 <li><span class="dot">✓</span> Real SMTP probing — detects mailboxes that can receive</li>
                 <li><span class="dot">✓</span> Key delivered to your email instantly after payment</li>
-                <li><span class="dot">✓</span> Hard cap: exactly 100,000 checks — never more</li>
+                <li><span class="dot">✓</span> Works in the TrueSendy app immediately</li>
             </ul>
 
             <button class="key-buy" id="buy-btn" onclick="buyKey()">Buy Key — $<span id="kpi-price-btn">49</span></button>
@@ -243,25 +256,51 @@
             b.classList.add('show');
         }
 
-        // ── load price + allowance ──
+        // ── load packages ──
+        let keyPackages = [], keySelected = null;
         (async () => {
             try {
-                const r = await fetch('/api/key-price').then(r => r.json());
-                priceUsd = r.priceUsd ?? priceUsd;
-                tokens   = r.tokens ?? tokens;
-                days     = r.validityDays ?? days;
-                document.getElementById('kpi-tokens').textContent    = Number(tokens).toLocaleString();
-                document.getElementById('kpi-price').textContent     = priceUsd;
-                document.getElementById('kpi-price-btn').textContent = priceUsd;
-                document.getElementById('kpi-days').textContent      = days;
-            } catch (_) { /* fall back to defaults shown in HTML */ }
+                const r = await fetch('/api/packages').then(r => r.json());
+                days = r.validityDays || 30;
+                document.getElementById('kpi-days').textContent = days;
+                keyPackages = (r.packages && r.packages.length) ? r.packages : [
+                    { id:'ultimate', name:'Ultimate', tokens:100000, priceUsd:49, perEmail:'$0.00049' }
+                ];
+                renderKeyPackages();
+            } catch (_) {
+                keyPackages = [{ id:'ultimate', name:'Ultimate', tokens:100000, priceUsd:49, perEmail:'$0.00049' }];
+                renderKeyPackages();
+            }
         })();
 
-        // ── buy ──
+        function renderKeyPackages() {
+            const grid = document.getElementById('key-pkg-grid');
+            grid.innerHTML = keyPackages.map(p => `
+                <div class="key-pkg" data-id="${p.id}" onclick="selectKeyPkg('${p.id}')">
+                    ${p.popular ? '<span class="key-pkg-badge">★ Popular</span>' : ''}
+                    <div class="key-pkg-tokens">${Number(p.tokens).toLocaleString()}</div>
+                    <div class="key-pkg-price">$${p.priceUsd}</div>
+                    <div class="key-pkg-per">${p.perEmail || ''}/email</div>
+                </div>
+            `).join('');
+            const init = keyPackages.find(p => p.popular) || keyPackages[keyPackages.length - 1];
+            selectKeyPkg(init.id);
+        }
+
+        function selectKeyPkg(id) {
+            keySelected = keyPackages.find(p => p.id === id);
+            if (!keySelected) return;
+            document.querySelectorAll('.key-pkg').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`.key-pkg[data-id="${id}"]`).classList.add('selected');
+            document.getElementById('kpi-tokens').textContent = Number(keySelected.tokens).toLocaleString() + ' verifications';
+            document.getElementById('kpi-price').textContent = keySelected.priceUsd;
+            document.getElementById('kpi-price-btn').textContent = keySelected.priceUsd;
+        }
+
+        // ── buy — go to /checkout with the selected package pre-selected ──
         function buyKey() {
-            // Guest flow: go to /checkout where the buyer enters their email and
-            // pays. No account required — the key is emailed after payment.
-            window.location.href = '/checkout';
+            const pkgParam = keySelected ? '?pkg=' + keySelected.id : '';
+            window.location.href = '/checkout' + pkgParam;
         }
 
         // ── fluid mouse orb (same as signin.html) ──
