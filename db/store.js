@@ -202,6 +202,10 @@ function deductToken(userId, count = 1) {
     user.credits = Math.max(0, (user.credits || 0) - need);
 
     user.tokensUsed = (user.tokensUsed || 0) + count;
+    // Track usage history for the dashboard (cap at 100 entries to bound growth)
+    if (!Array.isArray(user.usageLog)) user.usageLog = [];
+    user.usageLog.unshift({ ts: Date.now(), amount: count });
+    if (user.usageLog.length > 100) user.usageLog.length = 100;
     saveDBSync(db);   // durable: paid deduction must hit disk before we respond
     return { ok: true };
 }
@@ -228,6 +232,14 @@ function getUserCredits(userId) {
     if (!user) return 0;
     if (maybeResetMonthlyQuota(user)) saveDB(db);
     return (user.credits || 0) + (user.planCredits || 0) + (user.purchasedTokens || 0);
+}
+
+// Return recent usage entries for the dashboard credit-history widget.
+function getUsageHistory(userId, limit = 20) {
+    const db = loadDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user || !Array.isArray(user.usageLog)) return [];
+    return user.usageLog.slice(0, Math.min(limit, 50));
 }
 
 // Lifetime usage + bucket breakdown for display (CLI balance, admin).
@@ -677,6 +689,7 @@ module.exports = {
     refundToken,
     deductCredit,          // back-compat shim (deducts 1)
     getUserCredits,
+    getUsageHistory,
     getUserTokenStatus,
     stampApiUse,
     markBotDownloaded,

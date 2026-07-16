@@ -131,6 +131,14 @@
             <div id="key-err" class="err"></div>
             <button class="btn btn-blue" style="margin-top:1rem;width:100%;justify-content:center" onclick="generateKey()">Generate New Key</button>
         </div>
+
+        <!-- Credit History -->
+        <div class="card" style="grid-column:1/-1">
+            <div class="card-title">📈 Recent Credit Usage</div>
+            <div id="usage-list" style="display:flex;flex-direction:column;gap:.4rem">
+                <div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No usage yet. Verify some emails to see your history here.</div>
+            </div>
+        </div>
     </div>
 
     <!-- Quick actions -->
@@ -148,10 +156,11 @@ const token = localStorage.getItem('ts_token');
 (async function() {
     if (!token) { window.location.href = '/signin'; return; }
     try {
-        // Load user profile + credits
-        const [meRes, creditsRes] = await Promise.all([
+        // Load user profile + credits + usage history
+        const [meRes, creditsRes, histRes] = await Promise.all([
             fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()),
-            fetch('/api/credits', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json())
+            fetch('/api/credits', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()),
+            fetch('/api/credit-history', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()).catch(() => ({ history: [] }))
         ]);
 
         if (meRes.error) { localStorage.removeItem('ts_token'); window.location.href = '/signin'; return; }
@@ -179,6 +188,9 @@ const token = localStorage.getItem('ts_token');
         // Load API keys
         await loadKeys();
 
+        // Render usage history
+        renderUsageHistory(histRes.history || []);
+
         // Show
         document.getElementById('gate').style.display = 'none';
         document.getElementById('navbar').style.display = '';
@@ -187,6 +199,33 @@ const token = localStorage.getItem('ts_token');
         document.getElementById('gate').innerHTML = '<p style="color:#ef4444;font-size:.88rem">Could not reach the server. <a href="/signin">Try signing in again.</a></p>';
     }
 })();
+
+function renderUsageHistory(history) {
+    const el = document.getElementById('usage-list');
+    if (!history || !history.length) {
+        el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No usage yet. Verify some emails to see your history here.</div>';
+        return;
+    }
+    el.innerHTML = history.slice(0, 10).map(h => {
+        const d = new Date(h.ts);
+        const ago = timeAgo(h.ts);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.55rem .8rem;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+            <span style="font-size:.85rem;color:var(--text)">📧 <strong>${Number(h.amount).toLocaleString()}</strong> emails verified</span>
+            <span style="font-size:.78rem;color:var(--muted)">${ago}</span>
+        </div>`;
+    }).join('');
+}
+
+function timeAgo(ts) {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    const days = Math.floor(hrs / 24);
+    return days + 'd ago';
+}
 
 async function loadKeys() {
     try {

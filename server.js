@@ -235,17 +235,20 @@ Object.entries(PAGE_FILES).forEach(([route, fp]) => {
     if (!fs.existsSync(fp)) console.warn(`[TrueSendy] WARNING: missing page file for ${route}: ${fp}`);
 });
 
-// ── [FIX #1] activeJobs with TTL — prevents memory leak on long-running servers
+// ── [FIX #1] activeJobs with TTL — completed results auto-delete after 7 days
+// (matches competitor behavior; keeps memory bounded on long-running servers).
 const activeJobs = {};
-const JOB_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const JOB_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 setInterval(() => {
     const cutoff = Date.now() - JOB_TTL_MS;
     for (const [id, job] of Object.entries(activeJobs)) {
-        if (job.createdAt < cutoff || job.status === 'complete' || job.status === 'expired') {
+        // Delete old jobs (>7 days) or errored/expired jobs.
+        // Completed jobs are kept so users can re-download within the 7-day window.
+        if (job.createdAt < cutoff || job.status === 'expired') {
             delete activeJobs[id];
         }
     }
-}, 15 * 60 * 1000).unref(); // Run every 15min, don't block process exit
+}, 60 * 60 * 1000).unref(); // Run hourly, don't block process exit
 
 // ── [FIX #7] Health check endpoint — for VPS uptime monitors (no rate limit)
 app.get('/health', (req, res) => {
@@ -577,6 +580,12 @@ app.get('/api/credits', authMiddleware, (req, res) => {
     res.json({ credits });
 });
 
+// Recent credit usage history for the dashboard widget.
+app.get('/api/credit-history', authMiddleware, (req, res) => {
+    const history = store.getUsageHistory(req.user.id, 20);
+    res.json({ history });
+});
+
 // ======================== SINGLE EMAIL CHECK ========================
 
 app.post('/api/verify-single', authMiddleware, async (req, res) => {
@@ -661,14 +670,74 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
     const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
     const ext = path.extname(req.file.originalname).toLowerCase();
 
+    // Preserve original file columns for structured files (CSV / XLSX).
+    // originalColumns = ['Company','Name',...], originalData = { 'email': {Company:'..',...} }
+    let originalColumns = null;
+    let originalData = {};
+
     try {
         let rawText = '';
         if (ext === '.xlsx' || ext === '.xls') {
             const workbook = xlsx.readFile(req.file.path);
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            // Try structured parse to preserve columns
+            const rows = xlsx.utils.sheet_to_json(firstSheet, { defval: '' });
+            if (rows.length && typeof rows[0] === 'object') {
+                originalColumns = Object.keys(rows[0]);
+                for (const row of rows) {
+                    const emailVal = Object.values(row).find(v => emailRegex.test(String(v)));
+                    if (emailVal) {
+                        const lc = String(emailVal).toLowerCase().trim();
+                        emails.add(lc);
+                        originalData[lc] = row;
+                    }
+                }
+            }
+            // Fallback: also scan all sheets as raw text (catches emails outside tables)
             workbook.SheetNames.forEach(sheetName => {
-                const sheet = workbook.Sheets[sheetName];
-                rawText += xlsx.utils.sheet_to_csv(sheet) + ' ';
+                rawText += xlsx.utils.sheet_to_csv(workbook.Sheets[sheetName]) + ' ';
             });
+            const found = rawText.match(emailRegex);
+            if (found) found.forEach(e => emails.add(e.toLowerCase().trim()));
+        } else if (ext === '.csv') {
+            const fileText = fs.readFileSync(req.file.path, 'utf8');
+            // Parse CSV into rows to preserve columns
+            const lines = fileText.split(/\r?\n/).filter(l => l.trim());
+            if (lines.length) {
+                const parseLine = (line) => {
+                    const cells = [];
+                    let cur = '', inQ = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const ch = line[i];
+                        if (ch === '"') { inQ = !inQ; continue; }
+                        if (ch === ',' && !inQ) { cells.push(cur); cur = ''; continue; }
+                        cur += ch;
+                    }
+                    cells.push(cur);
+                    return cells;
+                };
+                const headerCells = parseLine(lines[0]).map(c => c.trim());
+                // Does the header look like a real header row? (contains non-email text)
+                const headerLooksReal = headerCells.some(c => c && !emailRegex.test(c) && isNaN(c));
+                if (headerLooksReal) {
+                    originalColumns = headerCells;
+                    const startIdx = 1; // skip header
+                    for (let i = startIdx; i < lines.length; i++) {
+                        const cells = parseLine(lines[i]);
+                        const row = {};
+                        headerCells.forEach((h, idx) => { row[h] = (cells[idx] || '').trim(); });
+                        const emailVal = cells.find(c => emailRegex.test(c));
+                        if (emailVal) {
+                            const lc = emailVal.toLowerCase().trim();
+                            emails.add(lc);
+                            originalData[lc] = row;
+                        }
+                    }
+                }
+            }
+            rawText = fileText; // also do a catch-all regex scan
+            const found = rawText.match(emailRegex);
+            if (found) found.forEach(e => emails.add(e.toLowerCase().trim()));
         } else if (ext === '.pdf') {
             const dataBuffer = fs.readFileSync(req.file.path);
             const data = await pdfParse(dataBuffer);
@@ -679,8 +748,11 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
         } else {
             rawText = fs.readFileSync(req.file.path, 'utf8');
         }
-        const found = rawText.match(emailRegex);
-        if (found) found.forEach(e => emails.add(e.toLowerCase().trim()));
+        // Catch-all regex scan for any format
+        if (ext !== '.csv' && ext !== '.xlsx' && ext !== '.xls') {
+            const found = rawText.match(emailRegex);
+            if (found) found.forEach(e => emails.add(e.toLowerCase().trim()));
+        }
     } catch (e) {
         console.error('Extraction error:', e);
         try { fs.unlinkSync(req.file.path); } catch (_) {}
@@ -732,6 +804,8 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
         recentInvalid : [],
         status    : 'running',
         createdAt : Date.now(),   // ← required by TTL cleanup
+        originalColumns,               // null for unstructured files
+        originalData,                   // { email: { col: val, ... } }
     };
     res.json({ jobId, total: validEmails.length });
     processJob(jobId).catch(err => {
@@ -865,28 +939,39 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     }
 
     // CSV / Excel — rich columns with ALL verification data (like competitor)
-    const headers = [
+    // If the uploaded file had structured columns, preserve them FIRST.
+    const hasOrig = job.originalColumns && job.originalColumns.length;
+    const origCols = hasOrig ? job.originalColumns : [];
+    const origLookup = job.originalData || {};
+
+    const verifHeaders = [
         'Email', 'Status', 'Safe_To_Send', 'Category', 'Provider',
         'Reason', 'Domain', 'Is_Disposable', 'Is_Role_Based', 'Is_Catch_All',
         'Is_Free_Email', 'Syntax_Valid', 'MX_Accepts_Mail', 'Can_Connect_SMTP'
     ];
+    const headers = [...origCols, ...verifHeaders];
 
-    const rows = results.map(r => [
-        r.email || '',
-        r.status || 'unknown',
-        r.status === 'valid' ? 'true' : 'false',
-        r.emailCategory || 'unknown',
-        r.mxProvider || r.providerType || 'unknown',
-        r.reasonCode || '',
-        r.domain || '',
-        r.flags?.disposable ? 'true' : 'false',
-        r.flags?.roleBased ? 'true' : 'false',
-        r.flags?.catchAll ? 'true' : 'false',
-        r.emailCategory === 'Free' ? 'true' : 'false',
-        'true', // passed syntax check (otherwise wouldn't be verified)
-        r.flags?.catchAll ? 'true' : 'true', // MX accepts (otherwise invalid)
-        r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
-    ]);
+    const rows = results.map(r => {
+        const orig = origLookup[r.email] || {};
+        const origVals = origCols.map(c => orig[c] !== undefined ? String(orig[c]) : '');
+        const verifVals = [
+            r.email || '',
+            r.status || 'unknown',
+            r.status === 'valid' ? 'true' : 'false',
+            r.emailCategory || 'unknown',
+            r.mxProvider || r.providerType || 'unknown',
+            r.reasonCode || '',
+            r.domain || '',
+            r.flags?.disposable ? 'true' : 'false',
+            r.flags?.roleBased ? 'true' : 'false',
+            r.flags?.catchAll ? 'true' : 'false',
+            r.emailCategory === 'Free' ? 'true' : 'false',
+            'true',
+            'true',
+            r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
+        ];
+        return [...origVals, ...verifVals];
+    });
 
     const sheetName = category === 'all' ? 'All Results' : category === 'valid' ? 'Valid Emails' : 'Invalid Emails';
 
