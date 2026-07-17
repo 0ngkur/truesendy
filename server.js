@@ -735,6 +735,50 @@ app.post('/api/verify-bulk', authMiddleware, async (req, res) => {
 
 // ======================== BULK UPLOAD ========================
 
+// Shared job-creation helper — used by both file upload and typed-text upload.
+// Returns { jobId, total } on success, or { error, status } on failure.
+function createVerificationJob(userId, validEmails, filename, originalColumns, originalData) {
+    const MAX_EMAILS_PER_UPLOAD = 100000;
+    if (validEmails.length > MAX_EMAILS_PER_UPLOAD) {
+        return { status: 413, error: `Too many emails (${validEmails.length}). Maximum ${MAX_EMAILS_PER_UPLOAD.toLocaleString()} per upload — split your list.` };
+    }
+    const userCredits = store.getUserCredits(userId);
+    if (userCredits < validEmails.length) {
+        return { status: 402, error: `Not enough credits. You have ${userCredits} but need ${validEmails.length}. Please upgrade.` };
+    }
+    // Per-user concurrent job limit — 1 active job at a time
+    const userHasActiveJob = Object.values(activeJobs).some(
+        j => j.userId === userId && j.status === 'running'
+    );
+    if (userHasActiveJob) {
+        return { status: 429, error: 'You already have a job running. Wait for it to complete.' };
+    }
+    // Global concurrent-job cap
+    const MAX_CONCURRENT_JOBS = 20;
+    const runningJobs = Object.values(activeJobs).filter(j => j.status === 'running').length;
+    if (runningJobs >= MAX_CONCURRENT_JOBS) {
+        return { status: 503, error: 'Server is at capacity. Please try again in a moment.' };
+    }
+
+    const jobId = crypto.randomUUID();
+    activeJobs[jobId] = {
+        userId, emails: validEmails,
+        processed: 0, valid: 0, invalid: 0,
+        results: [], recentValid: [], recentInvalid: [],
+        status: 'running', createdAt: Date.now(),
+        filename: filename || '',
+        originalColumns: originalColumns || null,
+        originalData: originalData || {},
+        resultFile: path.join(os.tmpdir(), `truesendy_job_${jobId}.jsonl`),
+    };
+    try { fs.writeFileSync(activeJobs[jobId].resultFile, ''); } catch {}
+    processJob(jobId).catch(err => {
+        console.error('[TrueSendy] processJob unhandled:', err.message);
+        if (activeJobs[jobId]) activeJobs[jobId].status = 'error';
+    });
+    return { jobId, total: validEmails.length };
+}
+
 app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -834,61 +878,35 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
     try { fs.unlinkSync(req.file.path); } catch (_) {}
 
     const validEmails = Array.from(emails);
-
-    // Cap total emails per upload (memory protection against huge files)
-    const MAX_EMAILS_PER_UPLOAD = 100000;
-    if (validEmails.length > MAX_EMAILS_PER_UPLOAD) {
-        return res.status(413).json({ error: `Too many emails (${validEmails.length}). Maximum ${MAX_EMAILS_PER_UPLOAD.toLocaleString()} per upload — split your file.` });
+    if (!validEmails.length) {
+        return res.status(400).json({ error: 'No valid email addresses found in this file.' });
     }
 
-    const userCredits = store.getUserCredits(req.user.id);
+    const job = createVerificationJob(req.user.id, validEmails, req.file.originalname, originalColumns, originalData);
+    if (job.error) return res.status(job.status).json({ error: job.error });
+    res.json({ jobId: job.jobId, total: job.total });
 
-    if (userCredits < validEmails.length) {
-        return res.status(402).json({ error: `Not enough credits. You have ${userCredits} but need ${validEmails.length}. Please upgrade.` });
+});
+
+// ── Typed/pasted emails upload ───────────────────────────────────────────────
+// For users who want to type or paste emails directly instead of uploading a file.
+app.post('/api/upload-text', authMiddleware, async (req, res) => {
+    const { text } = req.body || {};
+    if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: 'No emails provided.' });
     }
-
-
-    const jobId = crypto.randomUUID();   // unguessable — defeats job-id brute force
-
-    // ── [FIX #4] Per-user concurrent job limit — 1 active job at a time
-    const userHasActiveJob = Object.values(activeJobs).some(
-        j => j.userId === req.user.id && j.status === 'running'
-    );
-    if (userHasActiveJob) {
-        return res.status(429).json({ error: 'You already have a job running. Wait for it to complete.' });
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const found = text.match(emailRegex);
+    if (!found || !found.length) {
+        return res.status(400).json({ error: 'No valid email addresses found in your text.' });
     }
+    const emails = new Set();
+    found.forEach(e => emails.add(e.toLowerCase().trim()));
+    const validEmails = Array.from(emails);
 
-    // ── Global concurrent-job cap — protects memory + SMTP under platform load
-    const MAX_CONCURRENT_JOBS = 20;
-    const runningJobs = Object.values(activeJobs).filter(j => j.status === 'running').length;
-    if (runningJobs >= MAX_CONCURRENT_JOBS) {
-        return res.status(503).json({ error: 'Server is at capacity. Please try again in a moment.' });
-    }
-
-    activeJobs[jobId] = {
-        userId    : req.user.id,
-        emails    : validEmails,
-        processed : 0,
-        valid     : 0,
-        invalid   : 0,
-        results   : [],                  // small rolling buffer (live feed only)
-        recentValid   : [],
-        recentInvalid : [],
-        status    : 'running',
-        createdAt : Date.now(),   // ← required by TTL cleanup
-        filename  : req.file ? req.file.originalname : '',  // for Tasks & Results
-        originalColumns,               // null for unstructured files
-        originalData,                   // { email: { col: val, ... } }
-        resultFile : path.join(os.tmpdir(), `truesendy_job_${jobId}.jsonl`),  // disk-backed results
-    };
-    // Truncate any stale result file from a previous run with the same id
-    try { fs.writeFileSync(activeJobs[jobId].resultFile, ''); } catch {}
-    res.json({ jobId, total: validEmails.length });
-    processJob(jobId).catch(err => {
-        console.error('[TrueSendy] processJob unhandled:', err.message);
-        if (activeJobs[jobId]) activeJobs[jobId].status = 'error';
-    });
-
+    const job = createVerificationJob(req.user.id, validEmails, 'Typed emails', null, {});
+    if (job.error) return res.status(job.status).json({ error: job.error });
+    res.json({ jobId: job.jobId, total: job.total });
 });
 
 // ── Disk-backed result storage ───────────────────────────────────────────────

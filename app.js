@@ -174,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateUI() {
         const navDashBtn = document.getElementById('nav-dashboard-btn');
-        const navVerifyLink = document.getElementById('nav-verify-link');
         const mobileDash = document.getElementById('mobile-dashboard-link');
         const mobileSignin = document.getElementById('mobile-signin-link');
         if (currentUser) {
@@ -184,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (navAuthBtn) navAuthBtn.style.display = 'none';
             if (navLogoutBtn) navLogoutBtn.style.display = 'block';
             if (navDashBtn) navDashBtn.style.display = 'inline-flex';
-            if (navVerifyLink) navVerifyLink.href = '/emailcheckup';
             if (mobileDash) mobileDash.style.display = 'block';
             if (mobileSignin) mobileSignin.style.display = 'none';
             if (dailyCreditsEl) dailyCreditsEl.textContent = currentUser.credits.toLocaleString();
@@ -195,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (navAuthBtn) navAuthBtn.style.display = 'inline-flex';
             if (navLogoutBtn) navLogoutBtn.style.display = 'none';
             if (navDashBtn) navDashBtn.style.display = 'none';
-            if (navVerifyLink) navVerifyLink.href = '#verify';
             if (mobileDash) mobileDash.style.display = 'none';
             if (mobileSignin) mobileSignin.style.display = 'block';
         }
