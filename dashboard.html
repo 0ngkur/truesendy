@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Dashboard — TrueSendy</title>
-    <meta name="description" content="Your TrueSendy dashboard — token balance, plan, API keys, and email verification usage.">
     <link rel="stylesheet" href="/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,8 +11,10 @@
     <style>
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
         :root{--blue:#2563eb;--blue-l:#3b82f6;--blue-d:#1d4ed8;--green:#10b981;--amber:#f59e0b;--red:#ef4444;
-              --bg:#f7f9fc;--surface:#fff;--s2:#f1f5f9;--border:#e2e8f0;--border2:#cbd5e1;
-              --text:#0f172a;--t2:#334155;--muted:#64748b;--r:14px;--rs:10px;--shadow:0 8px 30px rgba(15,23,42,.08)}
+              --bg:#f4f6fa;--surface:#fff;--s2:#f1f5f9;--border:#e2e8f0;--border2:#cbd5e1;
+              --text:#0f172a;--t2:#334155;--muted:#64748b;--r:14px;--rs:10px;
+              --sidebar:#0f172a;--sidebar2:#1e293b;
+              --shadow:0 8px 30px rgba(15,23,42,.08)}
         body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
         /* Auth gate */
@@ -21,277 +22,549 @@
         #gate .spin{width:42px;height:42px;border:3px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
 
-        /* Navbar */
-        .nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem}
-        .nav-logo{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.2rem;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:.4rem}
-        .nav-logo img{height:26px;border-radius:6px}
-        .nav-logo span{color:var(--blue)}
-        .nav-right{margin-left:auto;display:flex;gap:.6rem;align-items:center}
-        .nav-balance{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:.85rem;background:#eff6ff;color:var(--blue-d);padding:.35rem .9rem;border-radius:999px;border:1px solid #dbeafe}
-        .btn{padding:.5rem 1rem;border-radius:var(--rs);font-size:.84rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem}
-        .btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:var(--blue-d)}
-        .btn-ghost{background:transparent;color:var(--t2);border:1px solid var(--border)}
-        .btn-ghost:hover{background:var(--s2)}
-        .btn-green{background:var(--green);color:#fff}
-        .btn-red{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,.2)}.btn-red:hover{background:rgba(239,68,68,.08)}
+        /* ── Sidebar ── */
+        .layout{display:flex;min-height:100vh}
+        .sidebar{width:250px;background:var(--sidebar);color:#fff;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:50;transition:transform .25s}
+        .sidebar-logo{padding:1.25rem 1.5rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid rgba(255,255,255,.08)}
+        .sidebar-logo img{height:30px;border-radius:6px}
+        .sidebar-nav{flex:1;padding:.75rem;overflow-y:auto}
+        .sidebar-section{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:.75rem .75rem .25rem;font-weight:700}
+        .sidebar-link{display:flex;align-items:center;gap:.7rem;padding:.6rem .75rem;border-radius:8px;color:rgba(255,255,255,.7);text-decoration:none;font-size:.85rem;font-weight:500;cursor:pointer;transition:.15s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+        .sidebar-link:hover{background:rgba(255,255,255,.06);color:#fff}
+        .sidebar-link.active{background:var(--blue);color:#fff}
+        .sidebar-link .ico{font-size:1.05rem;width:20px;text-align:center}
+        .sidebar-credits{padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,.08)}
+        .sidebar-credits .sc-row{display:flex;justify-content:space-between;font-size:.78rem;color:rgba(255,255,255,.6);margin-bottom:.25rem}
+        .sidebar-credits .sc-row strong{color:#fff;font-family:'JetBrains Mono',monospace}
+        .btn-add-credits{display:block;width:100%;padding:.6rem;text-align:center;background:var(--amber);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:.85rem;text-decoration:none;margin-top:.75rem;cursor:pointer;font-family:inherit}
 
-        /* Layout */
-        .wrap{max-width:960px;margin:0 auto;padding:2rem 1.5rem}
-        .h1{font-family:'Outfit',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:.4rem}
-        .h1-sub{color:var(--muted);font-size:.92rem;margin-bottom:2rem}
+        /* ── Main content ── */
+        .main{flex:1;margin-left:250px;display:flex;flex-direction:column;min-width:0}
+        .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+        .topbar-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.1rem}
+        .topbar-right{display:flex;align-items:center;gap:.75rem}
+        .user-menu{position:relative;cursor:pointer;display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;border-radius:8px;transition:.15s}
+        .user-menu:hover{background:var(--s2)}
+        .user-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-l));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+        .user-name{font-size:.85rem;font-weight:600}
+        .user-sub{font-size:.7rem;color:var(--muted)}
+        .user-dropdown{position:absolute;top:100%;right:0;margin-top:.4rem;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);min-width:160px;overflow:hidden;display:none;z-index:60}
+        .user-dropdown.show{display:block}
+        .user-dropdown button,.user-dropdown a{display:block;width:100%;padding:.6rem 1rem;border:none;background:none;text-align:left;font-size:.85rem;cursor:pointer;color:var(--t2);text-decoration:none;font-family:inherit}
+        .user-dropdown button:hover,.user-dropdown a:hover{background:var(--s2)}
+        .user-dropdown .danger{color:var(--red)}
+        .hamburger{display:none;background:none;border:none;cursor:pointer;font-size:1.5rem;color:var(--text)}
 
-        /* Balance hero */
-        .balance-hero{background:linear-gradient(135deg,#1e3a8a,#2563eb);border-radius:20px;padding:2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
-        .balance-hero::after{content:'';position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(255,255,255,.1),transparent 70%);top:-80px;right:-80px;border-radius:50%}
-        .balance-label{font-size:.78rem;text-transform:uppercase;letter-spacing:1.5px;opacity:.7;margin-bottom:.5rem}
-        .balance-num{font-family:'JetBrains Mono',monospace;font-size:2.8rem;font-weight:800;line-height:1}
-        .balance-breakdown{display:flex;gap:1.5rem;margin-top:1rem;flex-wrap:wrap}
-        .bd-item{font-size:.82rem;opacity:.85}
-        .bd-item strong{font-family:'JetBrains Mono',monospace;font-weight:700}
+        .content{padding:1.5rem;max-width:1100px;width:100%;margin:0 auto}
+        .panel{display:none}
+        .panel.active{display:block;animation:fade .2s}
+        @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
 
-        /* Grid */
-        .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
-        @media(max-width:700px){.grid{grid-template-columns:1fr}}
-        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;box-shadow:var(--shadow)}
-        .card-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
-        .card-row{display:flex;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.88rem}
+        /* ── Stat cards ── */
+        .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+        .stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;box-shadow:var(--shadow)}
+        .stat-card .sc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:.75rem}
+        .stat-card .sc-label{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+        .stat-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:800;margin-top:.2rem}
+        .sc-icon.blue{background:#eff6ff;color:var(--blue)}
+        .sc-icon.green{background:#ecfdf5;color:var(--green)}
+        .sc-icon.amber{background:#fffbeb;color:var(--amber)}
+
+        /* ── Cards ── */
+        .card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1.5rem}
+        .card h3{font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+        .card-row{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.87rem}
         .card-row:last-child{border:none}
         .card-row .lbl{color:var(--muted)}
         .card-row .val{font-weight:600}
+
+        /* ── Quick verify ── */
+        .quick-verify{display:flex;gap:.5rem;margin-bottom:1rem}
+        .quick-verify input{flex:1;padding:.7rem 1rem;border:1.5px solid var(--border2);border-radius:var(--rs);font-size:.9rem;font-family:inherit;outline:none}
+        .quick-verify input:focus{border-color:var(--blue)}
+
+        /* ── Buttons ── */
+        .btn{padding:.5rem 1rem;border-radius:var(--rs);font-size:.84rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;justify-content:center}
+        .btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:var(--blue-d)}
+        .btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#059669}
+        .btn-ghost{background:transparent;color:var(--t2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--s2)}
+        .btn-red{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,.2)}.btn-red:hover{background:rgba(239,68,68,.08)}
+        .btn-full{width:100%}
+        .btn-lg{padding:.7rem 1.5rem;font-size:.92rem}
+
+        /* ── Badge ── */
         .badge{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
         .badge-free{background:var(--s2);color:var(--muted)}
         .badge-starter{background:#dbeafe;color:var(--blue-d)}
         .badge-pro{background:#e0e7ff;color:#4f46e5}
         .badge-agency{background:#fef3c7;color:#92400e}
-        .usage-bar{height:8px;background:var(--s2);border-radius:999px;overflow:hidden;margin-top:.5rem}
-        .usage-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue-l));border-radius:999px;transition:width .3s}
 
-        /* Keys table */
+        /* ── Table ── */
+        .tbl{width:100%;border-collapse:collapse;font-size:.85rem}
+        .tbl th{text-align:left;padding:.6rem .5rem;border-bottom:2px solid var(--border);color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
+        .tbl td{padding:.6rem .5rem;border-bottom:1px solid var(--border)}
+        .tbl tr:hover{background:var(--s2)}
+        .empty-state{text-align:center;color:var(--muted);padding:2rem 1rem;font-size:.88rem}
+
+        /* ── Key rows ── */
         .key-row{display:flex;align-items:center;gap:.6rem;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.85rem}
-        .key-masked{font-family:'JetBrains Mono',monospace;color:var(--t2);flex:1}
-        .key-empty{text-align:center;color:var(--muted);padding:1.5rem;font-size:.85rem}
+        .key-masked{font-family:'JetBrains Mono',monospace;color:var(--t2);flex:1;font-size:.8rem}
 
-        /* Quick actions */
-        .qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
-        @media(max-width:700px){.qa-grid{grid-template-columns:1fr}}
-        .qa-card{display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1.5rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);text-decoration:none;color:var(--text);transition:.15s}
-        .qa-card:hover{border-color:var(--blue);box-shadow:0 4px 20px rgba(37,99,235,.1);transform:translateY(-2px)}
-        .qa-icon{font-size:1.8rem}
-        .qa-label{font-size:.82rem;font-weight:600}
+        /* ── Profile form ── */
+        .form-group{margin-bottom:1rem}
+        .form-label{display:block;font-size:.82rem;font-weight:600;color:var(--t2);margin-bottom:.35rem}
+        .form-input{width:100%;padding:.65rem .9rem;border:1.5px solid var(--border2);border-radius:var(--rs);font-size:.9rem;font-family:inherit;outline:none}
+        .form-input:focus{border-color:var(--blue)}
 
         .err{color:var(--red);font-size:.85rem;min-height:1.2em}
-        .ok{color:var(--green);font-size:.85rem}
+        .ok{color:var(--green);font-size:.85rem;min-height:1.2em}
+
+        /* ── Mobile ── */
+        .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:45}
+        .overlay.show{display:block}
+        @media(max-width:900px){
+            .stats-grid{grid-template-columns:1fr}
+            .sidebar{transform:translateX(-100%)}
+            .sidebar.open{transform:translateX(0)}
+            .main{margin-left:0}
+            .hamburger{display:block}
+        }
     </style>
 </head>
 <body>
 
 <div id="gate"><div class="spin"></div><p style="color:var(--muted);font-size:.85rem">Loading your dashboard…</p></div>
 
-<nav class="nav" id="navbar" style="display:none">
-    <a href="/" class="nav-logo"><img src="/assets/logo.png" alt=""></a>
-    <div class="nav-right">
-        <span class="nav-balance" id="nav-balance">— tokens</span>
-        <a href="/emailcheckup" class="btn btn-blue">Verify Emails</a>
-        <button class="btn btn-ghost" onclick="logout()">Log out</button>
-    </div>
-</nav>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
-<div class="wrap" id="content" style="display:none">
-    <h1 class="h1">Your Dashboard</h1>
-    <p class="h1-sub" id="welcome">Welcome back!</p>
-
-    <!-- Balance hero -->
-    <div class="balance-hero">
-        <div class="balance-label">Token Balance</div>
-        <div class="balance-num" id="total-tokens">—</div>
-        <div class="balance-breakdown">
-            <div class="bd-item">Purchased: <strong id="bd-purchased">0</strong></div>
-            <div class="bd-item">Plan: <strong id="bd-plan">0</strong></div>
-            <div class="bd-item">Free: <strong id="bd-free">0</strong></div>
+<div class="layout">
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <img src="/assets/logo.png" alt="TrueSendy">
         </div>
-        <div style="margin-top:1.25rem">
-            <a href="/key" class="btn btn-green" style="text-decoration:none">+ Buy a Key (100k tokens)</a>
-        </div>
-    </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Main</div>
+            <button class="sidebar-link active" data-panel="overview" onclick="showPanel('overview')"><span class="ico">📊</span> Overview</button>
+            <a href="/emailcheckup" class="sidebar-link"><span class="ico">📧</span> Verify Emails</a>
+            <button class="sidebar-link" data-panel="tasks" onclick="showPanel('tasks')"><span class="ico">📋</span> Tasks &amp; Results</button>
 
-    <div class="grid">
-        <!-- Plan + usage -->
-        <div class="card">
-            <div class="card-title">📊 Plan & Usage</div>
-            <div class="card-row"><span class="lbl">Current Plan</span><span class="val"><span class="badge badge-free" id="plan-badge">free</span></span></div>
-            <div class="card-row"><span class="lbl">Tokens Used (all-time)</span><span class="val" id="tokens-used">0</span></div>
-            <div class="card-row"><span class="lbl">Member Since</span><span class="val" id="member-since">—</span></div>
-            <div style="margin-top:1rem"><a href="/subscribePlan" class="btn btn-blue" style="width:100%;justify-content:center;text-decoration:none">Upgrade Plan</a></div>
+            <div class="sidebar-section">Account</div>
+            <button class="sidebar-link" data-panel="keys" onclick="showPanel('keys')"><span class="ico">🔑</span> API Keys</button>
+            <button class="sidebar-link" data-panel="credits" onclick="showPanel('credits')"><span class="ico">📈</span> Credits History</button>
+            <a href="/key" class="sidebar-link"><span class="ico">💳</span> Buy Credits</a>
+            <button class="sidebar-link" data-panel="bot" onclick="showPanel('bot')"><span class="ico">🖥️</span> Download Bot</button>
+            <button class="sidebar-link" data-panel="profile" onclick="showPanel('profile')"><span class="ico">👤</span> My Profile</button>
+        </nav>
+        <div class="sidebar-credits">
+            <div class="sc-row"><span>Total Credits</span><strong id="sb-credits">0</strong></div>
+            <div class="sc-row"><span>Plan</span><strong id="sb-plan" style="text-transform:capitalize">free</strong></div>
+            <a href="/key" class="btn-add-credits">+ Add Credits</a>
         </div>
+    </aside>
 
-        <!-- API Keys -->
-        <div class="card">
-            <div class="card-title">🔑 API Keys (Bot)</div>
-            <div id="keys-list"><div class="key-empty">No active keys. Generate one to use the bot.</div></div>
-            <div id="key-err" class="err"></div>
-            <button class="btn btn-blue" style="margin-top:1rem;width:100%;justify-content:center" onclick="generateKey()">Generate New Key</button>
-        </div>
-
-        <!-- TrueSendy Bot Download Access -->
-        <div class="card">
-            <div class="card-title">🖥️ TrueSendy Desktop Bot</div>
-            <div id="bot-access-zone" style="text-align:center;padding:0.5rem 0">
-                <div style="color:var(--muted);font-size:0.85rem">Checking access…</div>
+    <!-- ==================== MAIN ==================== -->
+    <div class="main">
+        <header class="topbar">
+            <div style="display:flex;align-items:center;gap:.75rem">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <span class="topbar-title" id="topbar-title">Overview</span>
             </div>
-            <div id="bot-access-note" style="font-size:0.78rem;color:var(--muted);margin-top:0.75rem;text-align:center;line-height:1.5"></div>
-        </div>
+            <div class="topbar-right">
+                <div class="user-menu" id="user-menu" onclick="toggleUserMenu()">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div>
+                        <div class="user-name" id="user-name">User</div>
+                        <div class="user-sub">Click for options</div>
+                    </div>
+                    <div class="user-dropdown" id="user-dropdown">
+                        <button onclick="showPanel('profile')">👤 My Profile</button>
+                        <a href="/key">💳 Buy Credits</a>
+                        <button class="danger" onclick="logout()">🚪 Log Out</button>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-        <!-- Credit History -->
-        <div class="card" style="grid-column:1/-1">
-            <div class="card-title">📈 Recent Credit Usage</div>
-            <div id="usage-list" style="display:flex;flex-direction:column;gap:.4rem">
-                <div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No usage yet. Verify some emails to see your history here.</div>
+        <div class="content">
+            <!-- ══════════════ OVERVIEW ══════════════ -->
+            <div class="panel active" id="panel-overview">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="sc-icon blue">💰</div>
+                        <div class="sc-label">Total Credits</div>
+                        <div class="sc-value" id="ov-credits">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="sc-icon green">✅</div>
+                        <div class="sc-label">Plan</div>
+                        <div class="sc-value" style="font-size:1.2rem;text-transform:capitalize" id="ov-plan">free</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="sc-icon amber">📧</div>
+                        <div class="sc-label">Lifetime Verified</div>
+                        <div class="sc-value" id="ov-lifetime">0</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Quick Verify</h3>
+                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem">Verify a single email or open the full bulk verification tool.</p>
+                    <div class="quick-verify">
+                        <input type="email" id="quick-email" placeholder="Enter an email to verify...">
+                        <button class="btn btn-blue" onclick="quickVerify()">Verify</button>
+                    </div>
+                    <div id="quick-result" style="font-size:.85rem;min-height:1.2em"></div>
+                    <a href="/emailcheckup" class="btn btn-green btn-lg btn-full" style="margin-top:.75rem">Open Full Verification Tool →</a>
+                </div>
+
+                <div class="card">
+                    <h3>📋 Recent Activity</h3>
+                    <div id="ov-recent"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════ TASKS & RESULTS ══════════════ -->
+            <div class="panel" id="panel-tasks">
+                <div class="card">
+                    <h3>📋 Verification History</h3>
+                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Your past verification jobs. Results are kept for 7 days for re-download.</p>
+                    <div id="tasks-list"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════ API KEYS ══════════════ -->
+            <div class="panel" id="panel-keys">
+                <div class="card">
+                    <h3>🔑 API Keys</h3>
+                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Keys activate the TrueSendy bot. Generate one and paste it into the desktop app.</p>
+                    <div id="keys-list"><div class="empty-state">No active keys. Generate one below.</div></div>
+                    <div id="key-err" class="err"></div>
+                    <button class="btn btn-blue btn-full" style="margin-top:1rem" onclick="generateKey()">Generate New Key</button>
+                </div>
+            </div>
+
+            <!-- ══════════════ CREDITS HISTORY ══════════════ -->
+            <div class="panel" id="panel-credits">
+                <div class="card">
+                    <h3>📈 Credits Usage History</h3>
+                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Every verification deducts credits. Here's your recent usage.</p>
+                    <div id="credits-full-list"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════ DOWNLOAD BOT ══════════════ -->
+            <div class="panel" id="panel-bot">
+                <div class="card">
+                    <h3>🖥️ TrueSendy Desktop Bot</h3>
+                    <div id="bot-access-zone" style="text-align:center;padding:1rem 0">
+                        <div style="color:var(--muted);font-size:.85rem">Checking access…</div>
+                    </div>
+                    <div id="bot-access-note" style="font-size:.8rem;color:var(--muted);margin-top:.75rem;text-align:center;line-height:1.5"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════ PROFILE ══════════════ -->
+            <div class="panel" id="panel-profile">
+                <div class="card">
+                    <h3>👤 My Profile</h3>
+                    <div class="card-row"><span class="lbl">Email</span><span class="val" id="pf-email">—</span></div>
+                    <div class="card-row"><span class="lbl">Username</span><span class="val" id="pf-username">—</span></div>
+                    <div class="card-row"><span class="lbl">Plan</span><span class="val"><span class="badge badge-free" id="pf-plan">free</span></span></div>
+                    <div class="card-row"><span class="lbl">Member Since</span><span class="val" id="pf-since">—</span></div>
+                    <div class="card-row"><span class="lbl">Lifetime Verified</span><span class="val" id="pf-lifetime">0</span></div>
+                    <div style="margin-top:1rem"><a href="/subscribePlan" class="btn btn-blue btn-full">Upgrade Plan</a></div>
+                </div>
+                <div class="card">
+                    <h3>🔒 Change Password</h3>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-input" id="pf-newpass" placeholder="Enter new password (min 6 chars)">
+                    </div>
+                    <div id="pf-pass-msg" class="ok"></div>
+                    <button class="btn btn-blue" style="margin-top:.5rem" onclick="changePassword()">Update Password</button>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Quick actions -->
-    <h2 style="font-family:'Outfit',sans-serif;font-size:1.2rem;font-weight:700;margin:2rem 0 1rem">Quick Actions</h2>
-    <div class="qa-grid">
-        <a href="/emailcheckup" class="qa-card"><span class="qa-icon">📧</span><span class="qa-label">Verify Emails</span></a>
-        <a href="/key" class="qa-card"><span class="qa-icon">🔑</span><span class="qa-label">Buy a Key</span></a>
-        <a href="/downloads" class="qa-card"><span class="qa-icon">⬇️</span><span class="qa-label">Download Bot</span></a>
     </div>
 </div>
 
 <script>
 const token = localStorage.getItem('ts_token');
+let dashData = null;   // cached dashboard-stats response
 
+// ═══════════════════ INIT ═══════════════════
 (async function() {
     if (!token) { window.location.href = '/signin'; return; }
     try {
-        // Load user profile + credits + usage history
-        const [meRes, creditsRes, histRes] = await Promise.all([
+        const [meRes, statsRes] = await Promise.all([
             fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()),
-            fetch('/api/credits', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()),
-            fetch('/api/credit-history', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()).catch(() => ({ history: [] }))
+            fetch('/api/dashboard-stats', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()),
         ]);
-
         if (meRes.error) { localStorage.removeItem('ts_token'); window.location.href = '/signin'; return; }
 
+        dashData = statsRes;
         const u = meRes.user;
-        const total = creditsRes.credits || u.credits || 0;
-        const purchased = u.purchasedTokens || 0;
-        const planCredits = (u.credits || 0) > 5 ? 0 : (total - purchased); // approximate
+        const total = statsRes.credits || 0;
 
-        // Render
-        document.getElementById('welcome').textContent = `Welcome back, @${u.username}!`;
-        document.getElementById('total-tokens').textContent = Number(total).toLocaleString();
-        document.getElementById('bd-purchased').textContent = Number(purchased).toLocaleString();
-        document.getElementById('bd-plan').textContent = Number(u.plan === 'free' ? Math.min(u.credits || 0, 5) : (total - purchased)).toLocaleString();
-        document.getElementById('bd-free').textContent = Number(u.plan === 'free' ? (u.credits || 0) : 0).toLocaleString();
-        document.getElementById('nav-balance').textContent = Number(total).toLocaleString() + ' tokens';
-        document.getElementById('tokens-used').textContent = '—'; // not in sanitizeUser; admin-only
-        document.getElementById('member-since').textContent = new Date().getFullYear() === 2026 ? 'Recently' : '—';
+        // Sidebar
+        document.getElementById('sb-credits').textContent = Number(total).toLocaleString();
+        document.getElementById('sb-plan').textContent = statsRes.plan || 'free';
 
-        // Plan badge
-        const badge = document.getElementById('plan-badge');
-        badge.textContent = u.plan || 'free';
-        badge.className = 'badge badge-' + (u.plan || 'free');
+        // Top bar user
+        const initials = (u.username || u.email || 'U').slice(0, 2).toUpperCase();
+        document.getElementById('user-avatar').textContent = initials;
+        document.getElementById('user-name').textContent = '@' + u.username;
 
-        // Load API keys
-        await loadKeys();
+        // Overview
+        document.getElementById('ov-credits').textContent = Number(total).toLocaleString();
+        document.getElementById('ov-plan').textContent = statsRes.plan || 'free';
+        document.getElementById('ov-lifetime').textContent = Number(statsRes.tokensUsed || 0).toLocaleString();
 
-        // Load bot access status (Agency request / approval / download)
-        loadBotAccess(u);
+        // Recent activity (last 5 jobs)
+        renderRecentJobs(statsRes.jobHistory || []);
 
-        // Render usage history
-        renderUsageHistory(histRes.history || []);
+        // Tasks table
+        renderTasks(statsRes.jobHistory || []);
 
-        // Show
+        // Keys
+        loadKeys();
+
+        // Credits history (full)
+        renderCreditsFull(statsRes.usageLog || []);
+
+        // Bot access
+        loadBotAccess(statsRes);
+
+        // Profile
+        document.getElementById('pf-email').textContent = statsRes.email || u.email;
+        document.getElementById('pf-username').textContent = '@' + (statsRes.username || u.username);
+        const pbadge = document.getElementById('pf-plan');
+        pbadge.textContent = statsRes.plan || 'free';
+        pbadge.className = 'badge badge-' + (statsRes.plan || 'free');
+        document.getElementById('pf-since').textContent = statsRes.createdAt
+            ? new Date(statsRes.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recently';
+        document.getElementById('pf-lifetime').textContent = Number(statsRes.tokensUsed || 0).toLocaleString();
+
+        // Show everything
         document.getElementById('gate').style.display = 'none';
-        document.getElementById('navbar').style.display = '';
-        document.getElementById('content').style.display = '';
     } catch (e) {
-        document.getElementById('gate').innerHTML = '<p style="color:#ef4444;font-size:.88rem">Could not reach the server. <a href="/signin">Try signing in again.</a></p>';
+        console.error('Dashboard init error:', e);
+        localStorage.removeItem('ts_token');
+        window.location.href = '/signin';
     }
 })();
 
-// ── TrueSendy Bot access (Agency request / approval / download) ──
-async function loadBotAccess(user) {
+// ═══════════════════ PANEL SWITCHING ═══════════════════
+function showPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const el = document.getElementById('panel-' + name);
+    if (el) el.classList.add('active');
+    document.querySelectorAll('[data-panel]').forEach(b => b.classList.remove('active'));
+    const links = document.querySelectorAll(`[data-panel="${name}"]`);
+    links.forEach(l => l.classList.add('active'));
+    const titles = { overview: 'Overview', tasks: 'Tasks & Results', keys: 'API Keys', credits: 'Credits History', bot: 'Download Bot', profile: 'My Profile' };
+    document.getElementById('topbar-title').textContent = titles[name] || 'Dashboard';
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth <= 900) toggleSidebar(false);
+    window.scrollTo(0, 0);
+}
+
+// ═══════════════════ SIDEBAR + USER MENU ═══════════════════
+function toggleSidebar(force) {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('overlay');
+    if (force === false) { sb.classList.remove('open'); ov.classList.remove('show'); return; }
+    sb.classList.toggle('open'); ov.classList.toggle('show');
+}
+function toggleUserMenu() {
+    document.getElementById('user-dropdown').classList.toggle('show');
+}
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#user-menu')) {
+        document.getElementById('user-dropdown').classList.remove('show');
+    }
+});
+
+// ═══════════════════ QUICK VERIFY ═══════════════════
+async function quickVerify() {
+    const email = document.getElementById('quick-email').value.trim();
+    const res = document.getElementById('quick-result');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        res.innerHTML = '<span style="color:var(--red)">Please enter a valid email.</span>'; return;
+    }
+    res.innerHTML = '<span style="color:var(--muted)">Verifying…</span>';
+    try {
+        const r = await fetch('/api/verify-single', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ email })
+        }).then(r => r.json());
+        if (r.error) { res.innerHTML = '<span style="color:var(--red)">' + r.error + '</span>'; return; }
+        if (r.status === 'valid') {
+            res.innerHTML = '<span style="color:var(--green)">✅ ' + email + ' is VALID</span>';
+            document.getElementById('sb-credits').textContent = (parseInt(document.getElementById('sb-credits').textContent.replace(/,/g,'')) - 1).toLocaleString();
+        } else {
+            res.innerHTML = '<span style="color:var(--red)">❌ ' + email + ' is INVALID (' + (r.reasonCode || 'unknown') + ')</span>';
+        }
+    } catch { res.innerHTML = '<span style="color:var(--red)">Could not reach server.</span>'; }
+}
+
+// ═══════════════════ JOBS / TASKS ═══════════════════
+function renderRecentJobs(jobs) {
+    const el = document.getElementById('ov-recent');
+    if (!jobs || !jobs.length) {
+        el.innerHTML = '<div class="empty-state">No verification jobs yet. <a href="/emailcheckup" style="color:var(--blue)">Verify your first list →</a></div>';
+        return;
+    }
+    el.innerHTML = jobs.slice(0, 5).map(j => `
+        <div class="card-row">
+            <span class="lbl">${esc(j.filename || 'List')} · ${j.total} emails</span>
+            <span class="val"><span style="color:var(--green)">${j.valid}✓</span> <span style="color:var(--red)">${j.invalid}✗</span> <span style="color:var(--muted);font-size:.75rem">${timeAgo(j.date)}</span></span>
+        </div>`).join('');
+}
+
+function renderTasks(jobs) {
+    const el = document.getElementById('tasks-list');
+    if (!jobs || !jobs.length) {
+        el.innerHTML = '<div class="empty-state">No jobs yet. Once you verify a list, it will appear here with a re-download link.</div>';
+        return;
+    }
+    el.innerHTML = '<table class="tbl"><thead><tr><th>Date</th><th>File</th><th>Total</th><th>Valid</th><th>Invalid</th><th>Download</th></tr></thead><tbody>' +
+        jobs.map(j => `<tr>
+            <td>${new Date(j.date).toLocaleDateString()}</td>
+            <td>${esc(j.filename || 'List')}</td>
+            <td>${j.total}</td>
+            <td style="color:var(--green)">${j.valid}</td>
+            <td style="color:var(--red)">${j.invalid}</td>
+            <td><a href="/api/download/${j.id}?format=original&category=all&token=${encodeURIComponent(token)}" class="btn btn-ghost" style="padding:.25rem .6rem;font-size:.75rem" target="_blank">⬇ CSV</a></td>
+        </tr>`).join('') + '</tbody></table>';
+}
+
+// ═══════════════════ CREDITS HISTORY ═══════════════════
+function renderCreditsFull(log) {
+    const el = document.getElementById('credits-full-list');
+    if (!log || !log.length) {
+        el.innerHTML = '<div class="empty-state">No usage yet. Credits are deducted as you verify emails.</div>';
+        return;
+    }
+    el.innerHTML = '<table class="tbl"><thead><tr><th>When</th><th>Emails Verified</th><th>Time</th></tr></thead><tbody>' +
+        log.slice(0, 30).map(h => `<tr>
+            <td>${timeAgo(h.ts)}</td>
+            <td><strong>${h.amount}</strong></td>
+            <td style="color:var(--muted);font-size:.78rem">${new Date(h.ts).toLocaleString()}</td>
+        </tr>`).join('') + '</tbody></table>';
+}
+
+// ═══════════════════ API KEYS (existing) ═══════════════════
+async function loadKeys() {
+    try {
+        const r = await fetch('/api/keys', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
+        const list = document.getElementById('keys-list');
+        if (!r.keys || r.keys.length === 0) {
+            list.innerHTML = '<div class="empty-state">No active keys. Generate one to use the bot.</div>';
+            return;
+        }
+        list.innerHTML = r.keys.map(k => `
+            <div class="key-row">
+                <span class="key-masked">${k.key}</span>
+                <span style="font-size:.72rem;color:${k.active ? 'var(--green)' : 'var(--red)'}">${k.active ? 'Active' : 'Revoked'}</span>
+            </div>`).join('');
+    } catch {}
+}
+
+async function generateKey() {
+    const errEl = document.getElementById('key-err'); errEl.textContent = '';
+    try {
+        const r = await fetch('/api/keys/generate', {
+            method: 'POST', headers: { Authorization: 'Bearer ' + token }
+        }).then(r => r.json());
+        if (r.error) {
+            errEl.textContent = r.error;
+            if (r.error.includes('Agency')) {
+                errEl.innerHTML += '<br><a href="/key" style="color:var(--blue)">Buy a key →</a> or <button class="btn btn-blue" style="margin-top:.5rem" onclick="showPanel(\'bot\')">Request Agency Access</button>';
+            }
+            return;
+        }
+        document.getElementById('keys-list').innerHTML = `
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1rem;margin-bottom:.75rem">
+                <p style="color:#15803d;font-size:.82rem;font-weight:600;margin-bottom:.5rem">✓ Key generated! Copy it now — shown only once:</p>
+                <p style="font-family:'JetBrains Mono',monospace;font-size:.88rem;word-break:break-all;color:#0f172a">${r.key}</p>
+            </div>`;
+        setTimeout(() => loadKeys(), 6000);
+    } catch { errEl.textContent = 'Could not reach the server.'; }
+}
+
+// ═══════════════════ BOT ACCESS ═══════════════════
+function loadBotAccess(stats) {
     const zone = document.getElementById('bot-access-zone');
     const note = document.getElementById('bot-access-note');
-    const token = localStorage.getItem('ts_token');
 
-    // Fetch current status (GET — doesn't create a request)
-    let status = { plan: user.plan || 'free', agencyRequested: false };
-    try {
-        status = await fetch('/api/agency-status', {
-            headers: { Authorization: 'Bearer ' + token }
-        }).then(r => r.json());
-    } catch {}
-
-    // Already Agency? Show download button + key option.
-    if (status.plan === 'agency' || status.canDownload) {
+    if (stats.plan === 'agency') {
         zone.innerHTML = `
-            <div style="font-size:0.85rem;color:var(--green);font-weight:600;margin-bottom:0.75rem">✅ Agency access approved</div>
-            <a href="/downloads/TrueSendy-Setup.exe?token=${encodeURIComponent(token)}" class="btn btn-green" style="width:100%;justify-content:center;text-decoration:none;margin-bottom:0.5rem">⬇ Download TrueSendy Bot</a>
-            <a href="/key" class="btn btn-blue" style="width:100%;justify-content:center;text-decoration:none">🔑 Buy / View API Key</a>`;
+            <div style="font-size:.9rem;color:var(--green);font-weight:600;margin-bottom:.75rem">✅ Agency access approved</div>
+            <a href="/downloads/TrueSendy-Setup.exe?token=${encodeURIComponent(token)}" class="btn btn-green btn-lg btn-full" style="max-width:300px;margin:0 auto">⬇ Download TrueSendy Bot</a>`;
         note.textContent = 'You can download the desktop bot and use your API key to activate it.';
         return;
     }
 
-    // Pending request?
-    if (status.agencyRequested) {
+    if (stats.agencyRequested) {
         zone.innerHTML = `
-            <div style="font-size:0.85rem;color:#1e40af;font-weight:600;margin-bottom:0.75rem">⏳ Request pending admin approval</div>
-            <div style="font-size:0.82rem;color:var(--muted);padding:0.5rem 0">Your request has been submitted. You'll be able to download the bot once an admin approves it.</div>`;
-        note.textContent = 'Approval usually takes a few hours. Refresh this page after approval.';
+            <div style="font-size:.9rem;color:#1e40af;font-weight:600;margin-bottom:.5rem">⏳ Request pending admin approval</div>
+            <div style="font-size:.85rem;color:var(--muted);padding:.25rem 0">Your request has been submitted. You'll be able to download once approved.</div>`;
+        note.textContent = 'Check back after approval — the download button will appear here.';
         return;
     }
 
-    // Not requested — show the request button
     zone.innerHTML = `
-        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem;line-height:1.5">The desktop bot is a premium feature. Request access and an admin will review your request.</div>
-        <button class="btn btn-blue" style="width:100%;justify-content:center" onclick="requestBotAccess()">🔑 Request Bot Access</button>`;
+        <div style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem;line-height:1.5">The desktop bot is a premium feature. Request access and an admin will review it.</div>
+        <button class="btn btn-blue btn-lg btn-full" style="max-width:300px;margin:0 auto" onclick="requestBotAccess()">🔑 Request Bot Access</button>`;
     note.innerHTML = 'Already have a key? <a href="/key" style="color:var(--blue);font-weight:600">Buy / view keys</a>';
 }
 
 async function requestBotAccess() {
-    const token = localStorage.getItem('ts_token');
-    if (!token) { window.location.href = '/signin'; return; }
     const zone = document.getElementById('bot-access-zone');
-    const note = document.getElementById('bot-access-note');
-    zone.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">Submitting request…</div>';
+    zone.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Submitting request…</div>';
     try {
         const r = await fetch('/api/request-agency', {
-            method: 'POST',
-            headers: { Authorization: 'Bearer ' + token }
+            method: 'POST', headers: { Authorization: 'Bearer ' + token }
         }).then(r => r.json());
-        if (r.error) {
-            zone.innerHTML = `<div style="color:var(--red);font-size:0.85rem">${r.error}</div>`;
-            return;
-        }
+        if (r.error) { zone.innerHTML = '<div style="color:var(--red);font-size:.85rem">' + r.error + '</div>'; return; }
         zone.innerHTML = `
-            <div style="font-size:0.85rem;color:var(--green);font-weight:600;margin-bottom:0.5rem">✅ Request submitted!</div>
-            <div style="font-size:0.82rem;color:var(--muted);padding:0.25rem 0">An admin will review your request. You'll be able to download the bot once approved.</div>`;
-        note.textContent = 'Check back on this dashboard after approval — the download button will appear here.';
+            <div style="font-size:.9rem;color:var(--green);font-weight:600;margin-bottom:.5rem">✅ Request submitted!</div>
+            <div style="font-size:.85rem;color:var(--muted);padding:.25rem 0">An admin will review your request. You'll be able to download once approved.</div>`;
     } catch {
-        zone.innerHTML = '<div style="color:var(--red);font-size:0.85rem">Could not submit. Please try again.</div>';
+        zone.innerHTML = '<div style="color:var(--red);font-size:.85rem">Could not submit. Please try again.</div>';
     }
 }
 
-function renderUsageHistory(history) {
-    const el = document.getElementById('usage-list');
-    if (!history || !history.length) {
-        el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No usage yet. Verify some emails to see your history here.</div>';
-        return;
+// ═══════════════════ PROFILE ═══════════════════
+async function changePassword() {
+    const newPass = document.getElementById('pf-newpass').value;
+    const msg = document.getElementById('pf-pass-msg');
+    if (!newPass || newPass.length < 6) {
+        msg.className = 'err'; msg.textContent = 'Password must be at least 6 characters.'; return;
     }
-    el.innerHTML = history.slice(0, 10).map(h => {
-        const d = new Date(h.ts);
-        const ago = timeAgo(h.ts);
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.55rem .8rem;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
-            <span style="font-size:.85rem;color:var(--text)">📧 <strong>${Number(h.amount).toLocaleString()}</strong> emails verified</span>
-            <span style="font-size:.78rem;color:var(--muted)">${ago}</span>
-        </div>`;
-    }).join('');
+    msg.className = 'ok'; msg.textContent = 'Updating…';
+    try {
+        const r = await fetch('/api/auth/update-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ password: newPass })
+        }).then(r => r.json());
+        if (r.error) { msg.className = 'err'; msg.textContent = r.error; return; }
+        msg.className = 'ok'; msg.textContent = '✓ Password updated successfully.';
+        document.getElementById('pf-newpass').value = '';
+    } catch { msg.className = 'err'; msg.textContent = 'Could not reach server.'; }
 }
 
+// ═══════════════════ LOGOUT ═══════════════════
+function logout() {
+    localStorage.removeItem('ts_token');
+    window.location.href = '/';
+}
+
+// ═══════════════════ UTILS ═══════════════════
 function timeAgo(ts) {
     const diff = Date.now() - ts;
     const mins = Math.floor(diff / 60000);
@@ -302,57 +575,7 @@ function timeAgo(ts) {
     const days = Math.floor(hrs / 24);
     return days + 'd ago';
 }
-
-async function loadKeys() {
-    try {
-        const r = await fetch('/api/keys', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
-        const list = document.getElementById('keys-list');
-        if (!r.keys || r.keys.length === 0) {
-            list.innerHTML = '<div class="key-empty">No active keys. Generate one to use the bot.</div>';
-            return;
-        }
-        list.innerHTML = r.keys.map(k => `
-            <div class="key-row">
-                <span class="key-masked">${k.key}</span>
-                <span style="font-size:.72rem;color:${k.active ? '#10b981' : '#ef4444'}">${k.active ? 'Active' : 'Revoked'}</span>
-                ${k.active ? `<button class="btn btn-red" style="padding:.25rem .6rem;font-size:.72rem" onclick="revokeKey('${k.key}')">Revoke</button>` : ''}
-            </div>
-        `).join('');
-    } catch {}
-}
-
-async function generateKey() {
-    const errEl = document.getElementById('key-err'); errEl.textContent = '';
-    try {
-        const r = await fetch('/api/keys/generate', {
-            method: 'POST', headers: { Authorization: 'Bearer ' + token }
-        }).then(r => r.json());
-        if (r.error) { errEl.textContent = r.error; return; }
-        // Show the full key ONCE
-        document.getElementById('keys-list').innerHTML = `
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1rem;margin-bottom:.75rem">
-                <p style="color:#15803d;font-size:.82rem;font-weight:600;margin-bottom:.5rem">✓ Key generated! Copy it now — shown only once:</p>
-                <p style="font-family:'JetBrains Mono',monospace;font-size:.88rem;word-break:break-all;color:#0f172a">${r.key}</p>
-            </div>`;
-        // Reload the full list after 5s
-        setTimeout(() => loadKeys(), 5000);
-    } catch { errEl.textContent = 'Could not reach the server.'; }
-}
-
-async function revokeKey(keyMasked) {
-    // The keys list returns masked keys; we need the full key to revoke.
-    // Since we can't get the full key from the masked list, we revoke by the masked pattern.
-    // Actually the /api/keys/revoke expects the full key. Let's handle this gracefully.
-    if (!confirm('Revoke this key? The bot will stop working immediately.')) return;
-    // Note: the API requires the full key, which we don't have in the masked list.
-    // This is a known limitation — the admin can revoke from the admin panel.
-    alert('For security, keys can only be revoked from the admin panel or by generating a new one (which auto-revokes the old one).');
-}
-
-function logout() {
-    localStorage.removeItem('ts_token');
-    window.location.href = '/';
-}
+function esc(s) { return String(s || '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 </script>
 </body>
 </html>

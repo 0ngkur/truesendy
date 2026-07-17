@@ -242,6 +242,35 @@ function getUsageHistory(userId, limit = 20) {
     return user.usageLog.slice(0, Math.min(limit, 50));
 }
 
+// ── Job history (Tasks & Results panel) ──────────────────────────────────────
+// Persist a short summary of each completed verification job so the user can
+// see past jobs + re-download results from the dashboard.
+function recordJobSummary(userId, summary) {
+    const db = loadDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return false;
+    if (!Array.isArray(user.jobHistory)) user.jobHistory = [];
+    user.jobHistory.unshift({
+        id: summary.id || null,
+        date: Date.now(),
+        total: summary.total || 0,
+        valid: summary.valid || 0,
+        invalid: summary.invalid || 0,
+        filename: summary.filename || '',
+        status: summary.status || 'complete',
+    });
+    if (user.jobHistory.length > 50) user.jobHistory.length = 50;
+    saveDB(db);
+    return true;
+}
+
+function getJobHistory(userId) {
+    const db = loadDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user || !Array.isArray(user.jobHistory)) return [];
+    return user.jobHistory;
+}
+
 // Lifetime usage + bucket breakdown for display (CLI balance, admin).
 function getUserTokenStatus(userId) {
     const db = loadDB();
@@ -747,6 +776,8 @@ module.exports = {
     deductCredit,          // back-compat shim (deducts 1)
     getUserCredits,
     getUsageHistory,
+    getJobHistory,
+    recordJobSummary,
     getUserTokenStatus,
     stampApiUse,
     markBotDownloaded,

@@ -498,6 +498,16 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
     res.json({ user: sanitizeUser(req.user) });
 });
 
+// Logged-in user changes their own password (no OTP needed — already authenticated).
+app.post('/api/auth/update-password', authMiddleware, async (req, res) => {
+    const { password } = req.body || {};
+    if (!password || String(password).length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+    await store.updatePassword(req.user.email, String(password));
+    res.json({ message: 'Password updated successfully.' });
+});
+
 function sanitizeUser(user) {
     return {
         id: user.id,
@@ -617,6 +627,27 @@ app.get('/api/credits', authMiddleware, (req, res) => {
 app.get('/api/credit-history', authMiddleware, (req, res) => {
     const history = store.getUsageHistory(req.user.id, 20);
     res.json({ history });
+});
+
+// Everything the dashboard needs in one call (avoids 5 separate fetches).
+app.get('/api/dashboard-stats', authMiddleware, (req, res) => {
+    const userId = req.user.id;
+    const user = store.findUserById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    res.json({
+        credits:        store.getUserCredits(userId),
+        plan:           user.plan || 'free',
+        planCredits:    user.planCredits || 0,
+        purchasedTokens: user.purchasedTokens || 0,
+        freeCredits:    user.credits || 0,
+        tokensUsed:     user.tokensUsed || 0,
+        email:          user.email,
+        username:       user.username,
+        createdAt:      user.createdAt,
+        jobHistory:     store.getJobHistory(userId),
+        usageLog:       store.getUsageHistory(userId, 50),
+        agencyRequested: !!user.agencyRequested,
+    });
 });
 
 // ======================== SINGLE EMAIL CHECK ========================
@@ -837,6 +868,7 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
         recentInvalid : [],
         status    : 'running',
         createdAt : Date.now(),   // ← required by TTL cleanup
+        filename  : req.file ? req.file.originalname : '',  // for Tasks & Results
         originalColumns,               // null for unstructured files
         originalData,                   // { email: { col: val, ... } }
         resultFile : path.join(os.tmpdir(), `truesendy_job_${jobId}.jsonl`),  // disk-backed results
@@ -976,6 +1008,21 @@ async function processJob(jobId) {
         job.status = 'error';
     } finally {
         clearTimeout(jobTimeout);
+        // Persist a summary to the user's job history (Tasks & Results panel)
+        if (job.status === 'complete' || job.status === 'out_of_credits') {
+            try {
+                store.recordJobSummary(job.userId, {
+                    id: jobId,
+                    total: job.processed,
+                    valid: job.valid,
+                    invalid: job.invalid,
+                    filename: job.filename || '',
+                    status: job.status,
+                });
+            } catch (e) {
+                console.warn('[TrueSendy] Could not record job summary:', e.message);
+            }
+        }
     }
 }
 
