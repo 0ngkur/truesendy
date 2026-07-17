@@ -1516,6 +1516,17 @@ app.post('/api/request-agency', authMiddleware, (req, res) => {
     res.json(result);
 });
 
+// User-side: check Agency request status WITHOUT creating a request.
+app.get('/api/agency-status', authMiddleware, (req, res) => {
+    const user = store.findUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    res.json({
+        plan: user.plan || 'free',
+        agencyRequested: !!user.agencyRequested,
+        canDownload: user.plan === 'agency',
+    });
+});
+
 // Admin-side: list pending Agency requests.
 app.get('/api/admin/agency-requests', adminLimiter, adminAuth, (req, res) => {
     res.json({ requests: store.getPendingAgencyRequests() });

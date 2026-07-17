@@ -132,6 +132,15 @@
             <button class="btn btn-blue" style="margin-top:1rem;width:100%;justify-content:center" onclick="generateKey()">Generate New Key</button>
         </div>
 
+        <!-- TrueSendy Bot Download Access -->
+        <div class="card">
+            <div class="card-title">🖥️ TrueSendy Desktop Bot</div>
+            <div id="bot-access-zone" style="text-align:center;padding:0.5rem 0">
+                <div style="color:var(--muted);font-size:0.85rem">Checking access…</div>
+            </div>
+            <div id="bot-access-note" style="font-size:0.78rem;color:var(--muted);margin-top:0.75rem;text-align:center;line-height:1.5"></div>
+        </div>
+
         <!-- Credit History -->
         <div class="card" style="grid-column:1/-1">
             <div class="card-title">📈 Recent Credit Usage</div>
@@ -188,6 +197,9 @@ const token = localStorage.getItem('ts_token');
         // Load API keys
         await loadKeys();
 
+        // Load bot access status (Agency request / approval / download)
+        loadBotAccess(u);
+
         // Render usage history
         renderUsageHistory(histRes.history || []);
 
@@ -199,6 +211,70 @@ const token = localStorage.getItem('ts_token');
         document.getElementById('gate').innerHTML = '<p style="color:#ef4444;font-size:.88rem">Could not reach the server. <a href="/signin">Try signing in again.</a></p>';
     }
 })();
+
+// ── TrueSendy Bot access (Agency request / approval / download) ──
+async function loadBotAccess(user) {
+    const zone = document.getElementById('bot-access-zone');
+    const note = document.getElementById('bot-access-note');
+    const token = localStorage.getItem('ts_token');
+
+    // Fetch current status (GET — doesn't create a request)
+    let status = { plan: user.plan || 'free', agencyRequested: false };
+    try {
+        status = await fetch('/api/agency-status', {
+            headers: { Authorization: 'Bearer ' + token }
+        }).then(r => r.json());
+    } catch {}
+
+    // Already Agency? Show download button + key option.
+    if (status.plan === 'agency' || status.canDownload) {
+        zone.innerHTML = `
+            <div style="font-size:0.85rem;color:var(--green);font-weight:600;margin-bottom:0.75rem">✅ Agency access approved</div>
+            <a href="/downloads/TrueSendy-Setup.exe?token=${encodeURIComponent(token)}" class="btn btn-green" style="width:100%;justify-content:center;text-decoration:none;margin-bottom:0.5rem">⬇ Download TrueSendy Bot</a>
+            <a href="/key" class="btn btn-blue" style="width:100%;justify-content:center;text-decoration:none">🔑 Buy / View API Key</a>`;
+        note.textContent = 'You can download the desktop bot and use your API key to activate it.';
+        return;
+    }
+
+    // Pending request?
+    if (status.agencyRequested) {
+        zone.innerHTML = `
+            <div style="font-size:0.85rem;color:#1e40af;font-weight:600;margin-bottom:0.75rem">⏳ Request pending admin approval</div>
+            <div style="font-size:0.82rem;color:var(--muted);padding:0.5rem 0">Your request has been submitted. You'll be able to download the bot once an admin approves it.</div>`;
+        note.textContent = 'Approval usually takes a few hours. Refresh this page after approval.';
+        return;
+    }
+
+    // Not requested — show the request button
+    zone.innerHTML = `
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem;line-height:1.5">The desktop bot is a premium feature. Request access and an admin will review your request.</div>
+        <button class="btn btn-blue" style="width:100%;justify-content:center" onclick="requestBotAccess()">🔑 Request Bot Access</button>`;
+    note.innerHTML = 'Already have a key? <a href="/key" style="color:var(--blue);font-weight:600">Buy / view keys</a>';
+}
+
+async function requestBotAccess() {
+    const token = localStorage.getItem('ts_token');
+    if (!token) { window.location.href = '/signin'; return; }
+    const zone = document.getElementById('bot-access-zone');
+    const note = document.getElementById('bot-access-note');
+    zone.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0">Submitting request…</div>';
+    try {
+        const r = await fetch('/api/request-agency', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token }
+        }).then(r => r.json());
+        if (r.error) {
+            zone.innerHTML = `<div style="color:var(--red);font-size:0.85rem">${r.error}</div>`;
+            return;
+        }
+        zone.innerHTML = `
+            <div style="font-size:0.85rem;color:var(--green);font-weight:600;margin-bottom:0.5rem">✅ Request submitted!</div>
+            <div style="font-size:0.82rem;color:var(--muted);padding:0.25rem 0">An admin will review your request. You'll be able to download the bot once approved.</div>`;
+        note.textContent = 'Check back on this dashboard after approval — the download button will appear here.';
+    } catch {
+        zone.innerHTML = '<div style="color:var(--red);font-size:0.85rem">Could not submit. Please try again.</div>';
+    }
+}
 
 function renderUsageHistory(history) {
     const el = document.getElementById('usage-list');
