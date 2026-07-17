@@ -8,6 +8,9 @@ let currentEmails = [];
 let lastResults   = [];
 let originalColumns = null;   // preserved file headers (CSV/XLSX)
 let originalData    = {};     // { email: { col: val, ... } }
+let fileEmails = [];          // file emails (saved for mode-switching)
+let fileOriginalColumns = null;
+let fileOriginalData = {};
 let pendingEmail  = null;   // email of the account being created (for OTP verify)
 
 // ── init ─────────────────────────────────────────────────────────────────────
@@ -193,15 +196,65 @@ $('settings-save').addEventListener('click', async () => {
 
 // ── file pick ────────────────────────────────────────────────────────────────
 $('pick-btn').addEventListener('click', pickFile);
+
+// ── mode toggle: file vs typed/paste ────────────────────────────────────────
+let verifyModeDesktop = 'file';
+$('mode-file').addEventListener('click', () => switchModeDesktop('file'));
+$('mode-type').addEventListener('click', () => switchModeDesktop('type'));
+
+function switchModeDesktop(mode) {
+    verifyModeDesktop = mode;
+    const isFile = mode === 'file';
+    $('mode-file').style.background = isFile ? 'var(--blue-600)' : 'var(--surface-2)';
+    $('mode-file').style.color = isFile ? '#fff' : 'var(--text-2)';
+    $('mode-type').style.background = !isFile ? 'var(--blue-600)' : 'var(--surface-2)';
+    $('mode-type').style.color = !isFile ? '#fff' : 'var(--text-2)';
+    $('dropzone').style.display = isFile ? '' : 'none';
+    $('typezone').style.display = isFile ? 'none' : '';
+    if (isFile) {
+        // restore file-based state
+        currentEmails = fileEmails;
+        originalColumns = fileOriginalColumns;
+        originalData = fileOriginalData;
+        updateVerifyButton();
+    } else {
+        // switch to typed mode — count whatever is in the textarea
+        updateTypedCountDesktop();
+    }
+}
+
+// Live count + verify-button enable for typed emails
+function updateTypedCountDesktop() {
+    const text = $('email-textarea') ? $('email-textarea').value : '';
+    const matches = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+    const unique = [...new Set(matches.map(e => e.toLowerCase().trim()))];
+    currentEmails = unique;
+    originalColumns = null;  // typed emails have no file structure
+    const countEl = $('typed-count');
+    if (countEl) countEl.textContent = unique.length + (unique.length === 1 ? ' email' : ' emails') + ' detected';
+    updateVerifyButton();
+}
+if ($('email-textarea')) $('email-textarea').addEventListener('input', updateTypedCountDesktop);
+
+function updateVerifyButton() {
+    const btn = $('verify-btn');
+    btn.disabled = currentEmails.length === 0;
+    btn.textContent = currentEmails.length > 0
+        ? 'Verify ' + currentEmails.length + ' emails'
+        : (verifyModeDesktop === 'type' ? 'Type emails above' : 'Verify emails');
+}
 async function pickFile() {
     const r = await window.ts.pickEmailFile();
     if (r.canceled) return;
     if (r.error) { $('file-info').innerHTML = '<span style="color:var(--red)">✗ ' + r.error + '</span>'; return; }
     currentEmails = r.emails;
-    originalColumns = r.originalColumns || null;
-    originalData = r.originalData || {};
+    fileEmails = r.emails;                          // saved for mode-switching back
+    fileOriginalColumns = r.originalColumns || null;
+    fileOriginalData = r.originalData || {};
+    originalColumns = fileOriginalColumns;
+    originalData = fileOriginalData;
     $('file-info').innerHTML = `📄 <strong>${r.emails.length}</strong> email${r.emails.length === 1 ? '' : 's'} found &nbsp;<span style="color:var(--muted)">${shortPath(r.filePath)}</span>`;
-    $('verify-btn').disabled = false;
+    updateVerifyButton();
 }
 // drag & drop onto the dropzone
 const dz = $('dropzone');

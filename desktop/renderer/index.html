@@ -69,12 +69,25 @@
 
   <main class="content">
     <section class="panel upload-panel">
+      <!-- Mode toggle: file vs typed -->
+      <div class="mode-toggle" style="display:flex;gap:0;margin-bottom:.75rem;border-radius:8px;overflow:hidden;border:1.5px solid var(--border-2)">
+        <button id="mode-file" class="mode-tab" style="flex:1;padding:.5rem;border:none;background:var(--blue-600);color:#fff;font-weight:600;cursor:pointer;font-family:inherit">📁 Upload File</button>
+        <button id="mode-type" class="mode-tab" style="flex:1;padding:.5rem;border:none;background:var(--surface-2);color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit">✍️ Type / Paste</button>
+      </div>
+
       <div id="dropzone" class="dropzone">
         <div class="dz-icon">📁</div>
         <div class="dz-text">Choose a file or drag it here</div>
         <div class="dz-sub">CSV · TXT · XLSX — emails are extracted automatically</div>
         <button id="pick-btn" class="btn-primary">Choose file</button>
       </div>
+
+      <!-- Type/paste emails zone (hidden by default) -->
+      <div id="typezone" style="display:none">
+        <textarea id="email-textarea" rows="6" placeholder="Type or paste emails here — one per line...&#10;&#10;john@acme.com&#10;jane@globex.com" style="width:100%;border:1.5px solid var(--border-2);border-radius:8px;padding:.6rem;font-family:'JetBrains Mono',monospace;font-size:.85rem;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        <div id="typed-count" style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem">0 emails detected</div>
+      </div>
+
       <div id="file-info" class="file-info"></div>
       <button id="verify-btn" class="btn-verify" disabled>Verify emails</button>
     </section>

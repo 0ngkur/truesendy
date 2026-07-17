@@ -315,7 +315,7 @@ function serveBotExe(req, res, filePath, filename) {
 
     if (!fs.existsSync(filePath)) {
         // File not cached on this server — redirect to GitHub release (one-time, cached on next boot).
-        return res.redirect(302, 'https://github.com/0ngkur/truesendy/releases/download/v1.2.0/TrueSendy-Setup.exe');
+        return res.redirect(302, 'https://github.com/0ngkur/truesendy/releases/download/v1.3.0/TrueSendy-Setup.exe');
     }
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/octet-stream');
@@ -325,7 +325,7 @@ function serveBotExe(req, res, filePath, filename) {
 // ── Boot-time exe fetcher: download the installer from GitHub + cache it locally ──
 // so the exe is served from truesendy.com, not a redirect. Runs once on first boot.
 const EXE_CACHE_PATH = path.join(__dirname, 'downloads', 'TrueSendy-Setup.exe');
-const EXE_GITHUB_URL = 'https://github.com/0ngkur/truesendy/releases/download/v1.2.0/TrueSendy-Setup.exe';
+const EXE_GITHUB_URL = 'https://github.com/0ngkur/truesendy/releases/download/v1.3.0/TrueSendy-Setup.exe';
 function fetchExeOnBoot() {
     if (fs.existsSync(EXE_CACHE_PATH)) {
         console.log('[TrueSendy] Bot exe cached locally — serving from VPS.');
