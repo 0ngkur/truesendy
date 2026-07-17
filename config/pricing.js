@@ -194,4 +194,73 @@ module.exports = {
     resetStripeCache,
     createCheckoutSession,
     createKeyCheckoutSession,
+    calculatePrice,
+    createCustomCheckoutSession,
 };
+
+// ── Volume-tiered pricing for custom credit amounts (the slider) ─────────────
+// The more you buy, the cheaper per email. Matches the preset packages so the
+// slider produces the same price at tier boundaries.
+function calculatePrice(tokens) {
+    const t = Math.floor(Number(tokens) || 0);
+    if (t < 100) return null;           // minimum 100 credits
+    if (t > 100000) return null;        // maximum 100k credits
+    let perEmail;
+    if (t <= 1000)        perEmail = 0.0020;
+    else if (t <= 5000)   perEmail = 0.0014;
+    else if (t <= 10000)  perEmail = 0.0012;
+    else if (t <= 25000)  perEmail = 0.0010;
+    else if (t <= 50000)  perEmail = 0.0008;
+    else                  perEmail = 0.0005;
+    const price = t * perEmail;
+    return {
+        tokens: t,
+        priceUsd: Math.round(price * 100) / 100,   // round to cents
+        perEmail: '$' + perEmail.toFixed(5).replace(/0+$/, '').replace(/\.$/, ''),
+    };
+}
+
+// Create a checkout session for a CUSTOM credit amount (from the slider).
+// Price is calculated server-side from calculatePrice() so clients can't tamper.
+async function createCustomCheckoutSession(successUrl, cancelUrl, customerEmail, userId, tokens) {
+    const stripe = getStripe();
+    if (!stripe) return { error: 'Stripe not configured' };
+
+    const calc = calculatePrice(tokens);
+    if (!calc) return { error: 'Amount must be between 100 and 100,000 credits.' };
+
+    const settings = require('../db/settings');
+    const product  = settings.getKeyProduct();
+
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: 'payment',
+            customer_email: customerEmail || undefined,
+            client_reference_id: userId || undefined,
+            line_items: [{
+                price_data: {
+                    currency: product.currency || 'usd',
+                    product_data: {
+                        name: `TrueSendy Credits — ${calc.tokens.toLocaleString()} emails`,
+                        description: `One-time purchase. Verifies up to ${calc.tokens.toLocaleString()} emails.`,
+                    },
+                    unit_amount: Math.round(calc.priceUsd * 100),
+                },
+                quantity: 1,
+            }],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            metadata: {
+                type:   'key_purchase',
+                userId: userId || '',
+                email:  customerEmail || '',
+                tokens: String(calc.tokens),
+                price:  String(calc.priceUsd),
+            },
+        });
+        return { sessionId: session.id, url: session.url, tokens: calc.tokens, priceUsd: calc.priceUsd };
+    } catch (err) {
+        return { error: `Stripe error: ${err.message}` };
+    }
+}

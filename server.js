@@ -228,6 +228,7 @@ const PAGE_FILES = {
     '/emailcheckup'  : path.join(__dirname, 'emailcheckup.html'), // ← Email Checkup tool
     '/key'           : path.join(__dirname, 'key.html'),
     '/checkout'      : path.join(__dirname, 'checkout.html'),
+    '/buycredits'    : path.join(__dirname, 'buycredits.html'),
     '/dashboard'     : path.join(__dirname, 'dashboard.html'),
 };
 
@@ -252,6 +253,13 @@ setInterval(() => {
         }
     }
 }, 60 * 60 * 1000).unref(); // Run hourly, don't block process exit
+
+// ── 7-day retention: purge old job history + usage logs for ALL users ──
+// Runs hourly. Keeps storage bounded — after 7 days, users' Tasks & Results
+// and Credits History are cleaned (matches the competitor's 7-day policy).
+setInterval(() => {
+    try { store.cleanupOldHistory(); } catch (e) { console.warn('[TrueSendy] History cleanup error:', e.message); }
+}, 60 * 60 * 1000).unref(); // hourly
 
 // ── [FIX #7] Health check endpoint — for VPS uptime monitors (no rate limit)
 app.get('/health', (req, res) => {
@@ -1356,6 +1364,42 @@ app.get('/api/packages', (req, res) => {
         validityDays:     settings.getKeyProduct().validityDays,
         stripeConfigured: pricing.isStripeConfigured(),
     });
+});
+
+// Calculate the price for a custom credit amount (the slider on /buycredits).
+// Price is computed server-side so it can't be tampered with from the browser.
+app.get('/api/calculate-price', (req, res) => {
+    const tokens = parseInt(req.query.tokens, 10);
+    const calc = pricing.calculatePrice(tokens);
+    if (!calc) return res.status(400).json({ error: 'Amount must be between 100 and 100,000.' });
+    res.json(calc);
+});
+
+// Buy a CUSTOM credit amount (from the slider). Authenticated users only —
+// the dashboard Buy Credits page uses this.
+app.post('/api/keys/custom-checkout', authMiddleware, async (req, res) => {
+    const { tokens } = req.body || {};
+    const origin = req.headers.origin || `http://localhost:${PORT}`;
+    if (pricing.isStripeConfigured()) {
+        const result = await pricing.createCustomCheckoutSession(
+            `${origin}/dashboard?success=1`,
+            `${origin}/buycredits?canceled=1`,
+            req.user.email,
+            req.user.id,
+            tokens
+        );
+        if (result.error) return res.status(400).json(result);
+        return res.json({ checkoutUrl: result.url, sessionId: result.sessionId });
+    }
+    // Dev mode — grant the credits immediately without payment.
+    if (process.env.ALLOW_DEV_PAYMENTS !== 'true') {
+        return res.status(503).json({ error: 'Payments are not configured. Please contact support.' });
+    }
+    const calc = pricing.calculatePrice(tokens);
+    if (!calc) return res.status(400).json({ error: 'Invalid amount.' });
+    const result = store.purchaseApiKey(req.user.id, calc.tokens);
+    if (result.error) return res.status(400).json(result);
+    res.json({ devMode: true, message: 'Dev mode — credits granted.', tokens: calc.tokens });
 });
 
 // [SUPERSEDED — kept for logged-in buyers] The public /key → /checkout flow now uses

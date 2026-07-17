@@ -150,16 +150,15 @@
             <button class="sidebar-link" data-panel="tasks" onclick="showPanel('tasks')"><span class="ico">📋</span> Tasks &amp; Results</button>
 
             <div class="sidebar-section">Account</div>
-            <button class="sidebar-link" data-panel="keys" onclick="showPanel('keys')"><span class="ico">🔑</span> API Keys</button>
+            <a href="/buycredits" class="sidebar-link"><span class="ico">💳</span> Buy Credits</a>
             <button class="sidebar-link" data-panel="credits" onclick="showPanel('credits')"><span class="ico">📈</span> Credits History</button>
-            <a href="/key" class="sidebar-link"><span class="ico">💳</span> Buy Credits</a>
             <button class="sidebar-link" data-panel="bot" onclick="showPanel('bot')"><span class="ico">🖥️</span> Download Bot</button>
             <button class="sidebar-link" data-panel="profile" onclick="showPanel('profile')"><span class="ico">👤</span> My Profile</button>
         </nav>
         <div class="sidebar-credits">
             <div class="sc-row"><span>Total Credits</span><strong id="sb-credits">0</strong></div>
             <div class="sc-row"><span>Plan</span><strong id="sb-plan" style="text-transform:capitalize">free</strong></div>
-            <a href="/key" class="btn-add-credits">+ Add Credits</a>
+            <a href="/buycredits" class="btn-add-credits">+ Add Credits</a>
         </div>
     </aside>
 
@@ -230,17 +229,6 @@
                     <h3>📋 Verification History</h3>
                     <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Your past verification jobs. Results are kept for 7 days for re-download.</p>
                     <div id="tasks-list"></div>
-                </div>
-            </div>
-
-            <!-- ══════════════ API KEYS ══════════════ -->
-            <div class="panel" id="panel-keys">
-                <div class="card">
-                    <h3>🔑 API Keys</h3>
-                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Keys activate the TrueSendy bot. Generate one and paste it into the desktop app.</p>
-                    <div id="keys-list"><div class="empty-state">No active keys. Generate one below.</div></div>
-                    <div id="key-err" class="err"></div>
-                    <button class="btn btn-blue btn-full" style="margin-top:1rem" onclick="generateKey()">Generate New Key</button>
                 </div>
             </div>
 
@@ -363,7 +351,7 @@ function showPanel(name) {
     document.querySelectorAll('[data-panel]').forEach(b => b.classList.remove('active'));
     const links = document.querySelectorAll(`[data-panel="${name}"]`);
     links.forEach(l => l.classList.add('active'));
-    const titles = { overview: 'Overview', tasks: 'Tasks & Results', keys: 'API Keys', credits: 'Credits History', bot: 'Download Bot', profile: 'My Profile' };
+    const titles = { overview: 'Overview', tasks: 'Tasks & Results', credits: 'Credits History', bot: 'Download Bot', profile: 'My Profile' };
     document.getElementById('topbar-title').textContent = titles[name] || 'Dashboard';
     // Close sidebar on mobile after navigation
     if (window.innerWidth <= 900) toggleSidebar(false);

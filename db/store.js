@@ -271,6 +271,30 @@ function getJobHistory(userId) {
     return user.jobHistory;
 }
 
+// ── 7-day retention cleanup ──────────────────────────────────────────────────
+// Purges jobHistory + usageLog entries older than 7 days for ALL users.
+// Runs periodically (called from server.js setInterval) to bound storage.
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;   // 7 days
+function cleanupOldHistory() {
+    const db = loadDB();
+    const cutoff = Date.now() - RETENTION_MS;
+    let changed = false;
+    for (const user of db.users) {
+        if (Array.isArray(user.jobHistory) && user.jobHistory.length) {
+            const before = user.jobHistory.length;
+            user.jobHistory = user.jobHistory.filter(j => (j.date || 0) > cutoff);
+            if (user.jobHistory.length !== before) changed = true;
+        }
+        if (Array.isArray(user.usageLog) && user.usageLog.length) {
+            const before = user.usageLog.length;
+            user.usageLog = user.usageLog.filter(h => (h.ts || 0) > cutoff);
+            if (user.usageLog.length !== before) changed = true;
+        }
+    }
+    if (changed) saveDB(db);
+    return changed;
+}
+
 // Lifetime usage + bucket breakdown for display (CLI balance, admin).
 function getUserTokenStatus(userId) {
     const db = loadDB();
@@ -778,6 +802,7 @@ module.exports = {
     getUsageHistory,
     getJobHistory,
     recordJobSummary,
+    cleanupOldHistory,
     getUserTokenStatus,
     stampApiUse,
     markBotDownloaded,

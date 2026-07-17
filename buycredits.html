@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Credits — TrueSendy</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        :root{--blue:#2563eb;--blue-l:#3b82f6;--blue-d:#1d4ed8;--green:#10b981;--amber:#f59e0b;--red:#ef4444;
+              --bg:#f4f6fa;--surface:#fff;--s2:#f1f5f9;--border:#e2e8f0;--border2:#cbd5e1;
+              --text:#0f172a;--t2:#334155;--muted:#64748b;--r:14px;--rs:10px;
+              --shadow:0 8px 30px rgba(15,23,42,.08);--shadow-lg:0 12px 40px rgba(37,99,235,.18)}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:3rem}
+        a{text-decoration:none;color:inherit}
+
+        .wrap{max-width:760px;margin:0 auto;padding:2rem 1.25rem}
+        .back-link{display:inline-flex;align-items:center;gap:.4rem;color:var(--muted);font-size:.85rem;font-weight:500;margin-bottom:1.25rem;transition:.15s}
+        .back-link:hover{color:var(--blue)}
+        h1{font-family:'Outfit',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:.3rem}
+        .sub{color:var(--muted);font-size:.92rem;margin-bottom:1.75rem}
+
+        /* ── The slider card ── */
+        .slider-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:2rem;box-shadow:var(--shadow);margin-bottom:1.5rem}
+        .slider-display{text-align:center;margin-bottom:1.5rem}
+        .slider-tokens{font-family:'JetBrains Mono',monospace;font-size:2.8rem;font-weight:800;color:var(--text);line-height:1}
+        .slider-tokens-label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-top:.3rem}
+        .slider-price{font-family:'Outfit',sans-serif;font-size:1.4rem;font-weight:800;color:var(--blue);margin-top:.75rem}
+        .slider-per{font-size:.82rem;color:var(--muted);margin-top:.15rem}
+
+        /* ── The slider itself ── */
+        .slider-wrap{position:relative;padding:.5rem 0 1.5rem}
+        .slider-track-bg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:10px;background:var(--s2);border-radius:999px;overflow:hidden}
+        .slider-track-fill{height:100%;background:linear-gradient(90deg,var(--blue-l),var(--blue));border-radius:999px;transition:width .05s linear;width:0%}
+        input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:10px;background:transparent;position:relative;z-index:2;cursor:pointer;outline:none}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:var(--blue);border:4px solid #fff;box-shadow:0 2px 10px rgba(37,99,235,.4);cursor:grab;transition:transform .12s}
+        input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+        input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}
+        input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--blue);border:4px solid #fff;box-shadow:0 2px 10px rgba(37,99,235,.4);cursor:grab}
+
+        .slider-ticks{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:.6rem;padding:0 4px}
+
+        /* ── Preset buttons ── */
+        .presets{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem;margin-bottom:1.5rem}
+        @media(max-width:600px){.presets{grid-template-columns:repeat(3,1fr)}}
+        .preset{padding:.6rem .4rem;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-size:.78rem;font-weight:700;color:var(--t2);cursor:pointer;transition:.15s;text-align:center;font-family:'JetBrains Mono',monospace}
+        .preset:hover{border-color:var(--blue-l);color:var(--blue)}
+        .preset.active{border-color:var(--blue);background:var(--blue);color:#fff}
+
+        /* ── Buy button ── */
+        .buy-btn{width:100%;padding:1rem;background:linear-gradient(135deg,var(--blue-d),var(--blue));color:#fff;border:none;border-radius:12px;font-size:1.05rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.18s;box-shadow:var(--shadow-lg)}
+        .buy-btn:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(37,99,235,.28)}
+        .buy-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+        .secure-note{text-align:center;font-size:.78rem;color:var(--muted);margin-top:.75rem}
+
+        /* ── Or subscriptions ── */
+        .divider-row{display:flex;align-items:center;gap:1rem;margin:2rem 0 1.25rem}
+        .divider-row::before,.divider-row::after{content:'';flex:1;height:1px;background:var(--border)}
+        .divider-row span{font-size:.8rem;color:var(--muted);font-weight:600}
+
+        .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+        @media(max-width:600px){.plans{grid-template-columns:1fr}}
+        .plan{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:1.5rem 1.25rem;position:relative;transition:.18s}
+        .plan:hover{border-color:var(--blue-l);transform:translateY(-3px);box-shadow:var(--shadow)}
+        .plan.popular{border-color:var(--blue);box-shadow:var(--shadow-lg)}
+        .plan-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:.65rem;font-weight:800;padding:2px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
+        .plan-name{font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:800}
+        .plan-price{font-family:'Outfit',sans-serif;font-size:1.8rem;font-weight:900;margin:.4rem 0 .2rem}
+        .plan-price small{font-size:.8rem;font-weight:500;color:var(--muted)}
+        .plan-tokens{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--green);font-weight:700;margin-bottom:.75rem}
+        .plan-features{list-style:none;font-size:.8rem;color:var(--t2);line-height:1.7;margin-bottom:1rem}
+        .plan-features li::before{content:'✓ ';color:var(--green);font-weight:700}
+        .plan-btn{display:block;width:100%;padding:.65rem;text-align:center;border-radius:10px;font-weight:700;font-size:.85rem;font-family:inherit;cursor:pointer;border:1.5px solid var(--blue);background:transparent;color:var(--blue);transition:.15s}
+        .plan-btn:hover{background:var(--blue);color:#fff}
+        .plan.popular .plan-btn{background:var(--blue);color:#fff}
+
+        .banner{border-radius:12px;padding:.85rem 1.1rem;font-size:.85rem;margin-bottom:1.5rem;display:none}
+        .banner.show{display:block}
+        .banner.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d}
+        .banner.err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+    </style>
+</head>
+<body>
+
+<div class="wrap">
+    <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+    <h1>Buy Credits</h1>
+    <p class="sub">Drag the slider to choose exactly how many credits you need — or pick a subscription plan below.</p>
+
+    <div class="banner ok" id="banner-ok"></div>
+    <div class="banner err" id="banner-err"></div>
+
+    <!-- ════════ SLIDER ════════ -->
+    <div class="slider-card">
+        <div class="slider-display">
+            <div class="slider-tokens" id="display-tokens">1,000</div>
+            <div class="slider-tokens-label">Email Verifications</div>
+            <div class="slider-price">$<span id="display-price">2.00</span></div>
+            <div class="slider-per" id="display-per">$0.0020 per email</div>
+        </div>
+
+        <div class="slider-wrap">
+            <div class="slider-track-bg"><div class="slider-track-fill" id="track-fill"></div></div>
+            <input type="range" id="credit-slider" min="100" max="100000" step="100" value="1000">
+            <div class="slider-ticks">
+                <span>100</span><span>10K</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span>
+            </div>
+        </div>
+
+        <div class="presets" id="presets">
+            <button class="preset" data-v="1000">1K</button>
+            <button class="preset" data-v="5000">5K</button>
+            <button class="preset active" data-v="10000">10K</button>
+            <button class="preset" data-v="25000">25K</button>
+            <button class="preset" data-v="50000">50K</button>
+            <button class="preset" data-v="100000">100K</button>
+        </div>
+
+        <button class="buy-btn" id="buy-btn" onclick="buyCredits()">Buy <span id="btn-tokens">1,000</span> Credits — $<span id="btn-price">2.00</span></button>
+        <div class="secure-note">🔒 Secure payment via Stripe · Credits added to your account instantly</div>
+    </div>
+
+    <!-- ════════ SUBSCRIPTIONS ════════ -->
+    <div class="divider-row"><span>OR CHOOSE A MONTHLY PLAN</span></div>
+
+    <div class="plans">
+        <div class="plan">
+            <div class="plan-name">Starter</div>
+            <div class="plan-price">$19<small>/mo</small></div>
+            <div class="plan-tokens">1,000 emails/mo</div>
+            <ul class="plan-features">
+                <li>Email verification</li>
+                <li>CSV/TXT/Excel upload</li>
+                <li>All export formats</li>
+            </ul>
+            <button class="plan-btn" onclick="subscribe('starter')">Choose Starter</button>
+        </div>
+        <div class="plan popular">
+            <div class="plan-badge">Most Popular</div>
+            <div class="plan-name">Pro</div>
+            <div class="plan-price">$49<small>/mo</small></div>
+            <div class="plan-tokens">10,000 emails/mo</div>
+            <ul class="plan-features">
+                <li>Everything in Starter</li>
+                <li>Priority processing</li>
+                <li>API access</li>
+            </ul>
+            <button class="plan-btn" onclick="subscribe('pro')">Choose Pro</button>
+        </div>
+        <div class="plan">
+            <div class="plan-name">Agency</div>
+            <div class="plan-price">$149<small>/mo</small></div>
+            <div class="plan-tokens">100,000 emails/mo</div>
+            <ul class="plan-features">
+                <li>Everything in Pro</li>
+                <li>Desktop bot download</li>
+                <li>Admin-approved access</li>
+            </ul>
+            <button class="plan-btn" onclick="subscribe('agency')">Choose Agency</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const token = localStorage.getItem('ts_token');
+const slider     = document.getElementById('credit-slider');
+const trackFill  = document.getElementById('track-fill');
+const dispTokens = document.getElementById('display-tokens');
+const dispPrice  = document.getElementById('display-price');
+const dispPer    = document.getElementById('display-per');
+const btnTokens  = document.getElementById('btn-tokens');
+const btnPrice   = document.getElementById('btn-price');
+const presets    = document.querySelectorAll('.preset');
+
+// ── Update display + fill width when slider moves ──
+function updateDisplay() {
+    const v = parseInt(slider.value, 10);
+    const pct = ((v - slider.min) / (slider.max - slider.min)) * 100;
+    trackFill.style.width = pct + '%';
+    dispTokens.textContent = v.toLocaleString();
+    btnTokens.textContent  = v.toLocaleString();
+
+    // Calculate price (mirrors server-side tiered pricing)
+    let perEmail;
+    if (v <= 1000)       perEmail = 0.0020;
+    else if (v <= 5000)  perEmail = 0.0014;
+    else if (v <= 10000) perEmail = 0.0012;
+    else if (v <= 25000) perEmail = 0.0010;
+    else if (v <= 50000) perEmail = 0.0008;
+    else                 perEmail = 0.0005;
+    const price = v * perEmail;
+    dispPrice.textContent = price.toFixed(2);
+    btnPrice.textContent  = price.toFixed(2);
+    dispPer.textContent   = '$' + perEmail.toFixed(5).replace(/0+$/,'').replace(/\.$/,'') + ' per email';
+
+    // Highlight matching preset
+    presets.forEach(p => {
+        p.classList.toggle('active', parseInt(p.dataset.v,10) === v);
+    });
+}
+
+slider.addEventListener('input', updateDisplay);
+
+// ── Preset buttons ──
+presets.forEach(p => {
+    p.addEventListener('click', () => {
+        slider.value = p.dataset.v;
+        updateDisplay();
+    });
+});
+
+// ── Buy credits (slider amount) ──
+async function buyCredits() {
+    if (!token) { window.location.href = '/signin?next=/buycredits'; return; }
+    const tokens = parseInt(slider.value, 10);
+    const btn = document.getElementById('buy-btn');
+    const errBox = document.getElementById('banner-err');
+    errBox.classList.remove('show');
+    btn.disabled = true;
+    btn.textContent = 'Redirecting to secure checkout…';
+    try {
+        const r = await fetch('/api/keys/custom-checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ tokens })
+        }).then(r => r.json());
+        if (r.error) { errBox.textContent = r.error; errBox.classList.add('show'); btn.disabled = false; btn.innerHTML = 'Buy <span id="btn-tokens">' + tokens.toLocaleString() + '</span> Credits — $<span id="btn-price">' + (tokens * 0.0020).toFixed(2) + '</span>'; updateDisplay(); return; }
+        if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return; }
+        if (r.devMode) {
+            const ok = document.getElementById('banner-ok');
+            ok.innerHTML = '✅ <strong>Dev mode</strong> — ' + r.tokens.toLocaleString() + ' credits added to your account.';
+            ok.classList.add('show');
+            btn.textContent = '✓ Credits Added';
+        }
+    } catch (e) {
+        errBox.textContent = 'Could not reach the server. Please try again.';
+        errBox.classList.add('show');
+        btn.disabled = false;
+        updateDisplay();
+    }
+}
+
+// ── Subscribe to a plan ──
+async function subscribe(plan) {
+    if (!token) { window.location.href = '/signin?next=/buycredits'; return; }
+    try {
+        const r = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ plan })
+        }).then(r => r.json());
+        if (r.error) { alert(r.error); return; }
+        if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return; }
+        alert('Subscription started!');
+    } catch { alert('Could not reach the server.'); }
+}
+
+// ── Init ──
+if (!token) {
+    // Allow viewing but prompt on buy
+    document.getElementById('buy-btn').textContent = 'Sign In to Buy';
+}
+updateDisplay();
+</script>
+</body>
+</html>
