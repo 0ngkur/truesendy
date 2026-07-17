@@ -2,98 +2,157 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — TrueSendy</title>
     <link rel="stylesheet" href="/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
     <style>
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        :root{--blue:#2563eb;--blue-l:#3b82f6;--blue-d:#1d4ed8;--green:#10b981;--amber:#f59e0b;--red:#ef4444;
-              --bg:#f4f6fa;--surface:#fff;--s2:#f1f5f9;--border:#e2e8f0;--border2:#cbd5e1;
-              --text:#0f172a;--t2:#334155;--muted:#64748b;--r:14px;--rs:10px;
-              --sidebar:#0f172a;--sidebar2:#1e293b;
-              --shadow:0 8px 30px rgba(15,23,42,.08)}
-        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        :root{
+            --blue:#2563eb;--blue-l:#3b82f6;--blue-d:#1d4ed8;--blue-50:#eff6ff;
+            --green:#10b981;--green-50:#ecfdf5;--amber:#f59e0b;--amber-50:#fffbeb;
+            --red:#ef4444;--red-50:#fef2f2;--purple:#8b5cf6;--cyan:#06b6d4;
+            --bg:#f0f2f7;--surface:#fff;--s2:#f1f5f9;--border:#e2e8f0;--border2:#cbd5e1;
+            --text:#0f172a;--t2:#334155;--muted:#64748b;--r:16px;--rs:12px;
+            --sidebar:#0b1120;--sidebar2:#1e293b;
+            --shadow-sm:0 1px 3px rgba(15,23,42,.06);
+            --shadow:0 4px 20px rgba(15,23,42,.06);
+            --shadow-lg:0 12px 40px rgba(15,23,42,.10);
+            --shadow-blue:0 8px 24px rgba(37,99,235,.20);
+        }
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
 
-        /* Auth gate */
+        /* ── Auth gate ── */
         #gate{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;gap:12px;flex-direction:column}
         #gate .spin{width:42px;height:42px;border:3px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
 
         /* ── Sidebar ── */
         .layout{display:flex;min-height:100vh}
-        .sidebar{width:250px;background:var(--sidebar);color:#fff;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:50;transition:transform .25s}
-        .sidebar-logo{padding:1.25rem 1.5rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid rgba(255,255,255,.08)}
-        .sidebar-logo img{height:30px;border-radius:6px}
-        .sidebar-nav{flex:1;padding:.75rem;overflow-y:auto}
-        .sidebar-section{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:.75rem .75rem .25rem;font-weight:700}
-        .sidebar-link{display:flex;align-items:center;gap:.7rem;padding:.6rem .75rem;border-radius:8px;color:rgba(255,255,255,.7);text-decoration:none;font-size:.85rem;font-weight:500;cursor:pointer;transition:.15s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
-        .sidebar-link:hover{background:rgba(255,255,255,.06);color:#fff}
-        .sidebar-link.active{background:var(--blue);color:#fff}
-        .sidebar-link .ico{font-size:1.05rem;width:20px;text-align:center}
-        .sidebar-credits{padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,.08)}
-        .sidebar-credits .sc-row{display:flex;justify-content:space-between;font-size:.78rem;color:rgba(255,255,255,.6);margin-bottom:.25rem}
-        .sidebar-credits .sc-row strong{color:#fff;font-family:'JetBrains Mono',monospace}
-        .btn-add-credits{display:block;width:100%;padding:.6rem;text-align:center;background:var(--amber);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:.85rem;text-decoration:none;margin-top:.75rem;cursor:pointer;font-family:inherit}
+        .sidebar{width:256px;background:linear-gradient(180deg,var(--sidebar) 0%,var(--sidebar2) 100%);color:#fff;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:50;transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 24px rgba(0,0,0,.15)}
+        .sidebar-logo{padding:1.35rem 1.5rem;display:flex;align-items:center;gap:.6rem;border-bottom:1px solid rgba(255,255,255,.06)}
+        .sidebar-logo img{height:32px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+        .sidebar-nav{flex:1;padding:.75rem .75rem;overflow-y:auto}
+        .sidebar-nav::-webkit-scrollbar{width:4px}
+        .sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+        .sidebar-section{font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.3);padding:1rem .75rem .35rem;font-weight:700}
+        .sidebar-link{display:flex;align-items:center;gap:.7rem;padding:.6rem .85rem;border-radius:10px;color:rgba(255,255,255,.6);text-decoration:none;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;border:none;background:none;width:100%;text-align:left;font-family:inherit;position:relative;overflow:hidden}
+        .sidebar-link:hover{background:rgba(255,255,255,.06);color:#fff;transform:translateX(2px)}
+        .sidebar-link.active{background:linear-gradient(135deg,var(--blue),var(--blue-l));color:#fff;box-shadow:0 4px 12px rgba(37,99,235,.35)}
+        .sidebar-link .ico{font-size:1.05rem;width:22px;text-align:center}
+        .sidebar-credits{padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.15)}
+        .sidebar-credits .sc-label{font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);font-weight:600;margin-bottom:.5rem}
+        .sidebar-credits .sc-row{display:flex;justify-content:space-between;font-size:.78rem;color:rgba(255,255,255,.6);margin-bottom:.3rem}
+        .sidebar-credits .sc-row strong{color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700}
+        .btn-add-credits{display:block;width:100%;padding:.65rem;text-align:center;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.85rem;text-decoration:none;margin-top:.75rem;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 4px 12px rgba(245,158,11,.3)}
+        .btn-add-credits:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(245,158,11,.4)}
 
-        /* ── Main content ── */
-        .main{flex:1;margin-left:250px;display:flex;flex-direction:column;min-width:0}
-        .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
-        .topbar-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.1rem}
+        /* ── Main ── */
+        .main{flex:1;margin-left:256px;display:flex;flex-direction:column;min-width:0}
+        .topbar{background:rgba(255,255,255,.8);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:.85rem 1.75rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+        .topbar-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.15rem}
         .topbar-right{display:flex;align-items:center;gap:.75rem}
-        .user-menu{position:relative;cursor:pointer;display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;border-radius:8px;transition:.15s}
+        .user-menu{position:relative;cursor:pointer;display:flex;align-items:center;gap:.5rem;padding:.35rem .6rem .35rem .35rem;border-radius:12px;transition:.2s}
         .user-menu:hover{background:var(--s2)}
-        .user-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-l));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+        .user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;box-shadow:0 2px 8px rgba(37,99,235,.3)}
         .user-name{font-size:.85rem;font-weight:600}
-        .user-sub{font-size:.7rem;color:var(--muted)}
-        .user-dropdown{position:absolute;top:100%;right:0;margin-top:.4rem;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);min-width:160px;overflow:hidden;display:none;z-index:60}
+        .user-sub{font-size:.68rem;color:var(--muted)}
+        .user-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);min-width:170px;overflow:hidden;display:none;z-index:60;animation:dropIn .2s ease}
+        @keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
         .user-dropdown.show{display:block}
-        .user-dropdown button,.user-dropdown a{display:block;width:100%;padding:.6rem 1rem;border:none;background:none;text-align:left;font-size:.85rem;cursor:pointer;color:var(--t2);text-decoration:none;font-family:inherit}
-        .user-dropdown button:hover,.user-dropdown a:hover{background:var(--s2)}
+        .user-dropdown button,.user-dropdown a{display:flex;align-items:center;gap:.5rem;width:100%;padding:.65rem 1rem;border:none;background:none;text-align:left;font-size:.85rem;cursor:pointer;color:var(--t2);text-decoration:none;font-family:inherit;transition:.15s}
+        .user-dropdown button:hover,.user-dropdown a:hover{background:var(--s2);color:var(--text)}
         .user-dropdown .danger{color:var(--red)}
-        .hamburger{display:none;background:none;border:none;cursor:pointer;font-size:1.5rem;color:var(--text)}
+        .hamburger{display:none;background:none;border:none;cursor:pointer;font-size:1.4rem;color:var(--text);padding:4px}
 
-        .content{padding:1.5rem;max-width:1100px;width:100%;margin:0 auto}
+        .content{padding:1.75rem;max-width:1180px;width:100%;margin:0 auto}
         .panel{display:none}
-        .panel.active{display:block;animation:fade .2s}
-        @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+        .panel.active{display:block;animation:panelIn .35s cubic-bezier(.4,0,.2,1)}
+        @keyframes panelIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
         /* ── Stat cards ── */
-        .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
-        .stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;box-shadow:var(--shadow)}
-        .stat-card .sc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:.75rem}
-        .stat-card .sc-label{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-        .stat-card .sc-value{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:800;margin-top:.2rem}
-        .sc-icon.blue{background:#eff6ff;color:var(--blue)}
-        .sc-icon.green{background:#ecfdf5;color:var(--green)}
-        .sc-icon.amber{background:#fffbeb;color:var(--amber)}
+        .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-bottom:1.5rem}
+        .stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:1.4rem;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:all .25s cubic-bezier(.4,0,.2,1);opacity:0;animation:cardIn .5s ease forwards}
+        @keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        .stat-card:nth-child(1){animation-delay:.05s}
+        .stat-card:nth-child(2){animation-delay:.12s}
+        .stat-card:nth-child(3){animation-delay:.19s}
+        .stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--blue-l)}
+        .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad,var(--blue));opacity:0;transition:opacity .25s}
+        .stat-card:hover::before{opacity:1}
+        .stat-card .sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem}
+        .stat-card .sc-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.25rem}
+        .stat-card .sc-trend{font-size:.72rem;font-weight:600;padding:.2rem .5rem;border-radius:6px;background:var(--green-50);color:var(--green)}
+        .stat-card .sc-label{font-size:.76rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+        .stat-card .sc-value{font-family:'Outfit',sans-serif;font-size:2rem;font-weight:800;margin-top:.15rem;line-height:1.1;background:linear-gradient(135deg,var(--text),var(--t2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .sc-icon.blue{background:var(--blue-50);color:var(--blue)}
+        .sc-icon.green{background:var(--green-50);color:var(--green)}
+        .sc-icon.amber{background:var(--amber-50);color:var(--amber)}
+        .sc-icon.purple{background:#f5f3ff;color:var(--purple)}
+        .stat-card[data-grad="blue"]{--grad:linear-gradient(90deg,var(--blue),var(--blue-l))}
+        .stat-card[data-grad="green"]{--grad:linear-gradient(90deg,var(--green),#34d399)}
+        .stat-card[data-grad="amber"]{--grad:linear-gradient(90deg,var(--amber),#fbbf24)}
+        .stat-card[data-grad="purple"]{--grad:linear-gradient(90deg,var(--purple),#a78bfa)}
+
+        /* ── Charts row ── */
+        .charts-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:1.1rem;margin-bottom:1.5rem}
+        @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+        .chart-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;box-shadow:var(--shadow);animation:cardIn .5s ease .26s forwards;opacity:0}
+        .chart-card h3{font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;margin-bottom:.25rem;display:flex;align-items:center;justify-content:space-between}
+        .chart-card .ch-sub{font-size:.78rem;color:var(--muted);margin-bottom:1.25rem}
+
+        /* Bar chart (7-day activity) */
+        .bar-chart{display:flex;align-items:flex-end;gap:.5rem;height:160px;padding-top:1rem}
+        .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:.4rem;height:100%;justify-content:flex-end}
+        .bar{width:100%;max-width:32px;background:linear-gradient(180deg,var(--blue-l),var(--blue));border-radius:6px 6px 0 0;min-height:4px;transition:all .3s ease;position:relative;cursor:pointer}
+        .bar:hover{filter:brightness(1.1);transform:scaleY(1.03);transform-origin:bottom}
+        .bar.today{background:linear-gradient(180deg,#8b5cf6,#6d28d9)}
+        .bar-label{font-size:.68rem;color:var(--muted);font-weight:600}
+
+        /* Donut chart */
+        .donut-wrap{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:center}
+        .donut{position:relative;width:150px;height:150px}
+        .donut svg{transform:rotate(-90deg)}
+        .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+        .donut-center .dc-num{font-family:'Outfit',sans-serif;font-size:1.5rem;font-weight:800;line-height:1}
+        .donut-center .dc-lbl{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:.2rem}
+        .donut-legend{display:flex;flex-direction:column;gap:.5rem}
+        .leg-item{display:flex;align-items:center;gap:.5rem;font-size:.82rem}
+        .leg-dot{width:10px;height:10px;border-radius:3px}
+        .leg-val{font-family:'JetBrains Mono',monospace;font-weight:700;margin-left:auto;color:var(--t2)}
 
         /* ── Cards ── */
-        .card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1.5rem}
-        .card h3{font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
-        .card-row{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.87rem}
+        .card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1.1rem;animation:cardIn .5s ease .3s forwards;opacity:0;transition:box-shadow .25s}
+        .card:hover{box-shadow:var(--shadow-lg)}
+        .card h3{font-family:'Outfit',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+        .card-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.87rem;transition:background .15s;border-radius:6px;margin:0 -.4rem;padding-left:.4rem;padding-right:.4rem}
+        .card-row:hover{background:var(--s2)}
         .card-row:last-child{border:none}
         .card-row .lbl{color:var(--muted)}
         .card-row .val{font-weight:600}
 
         /* ── Quick verify ── */
-        .quick-verify{display:flex;gap:.5rem;margin-bottom:1rem}
-        .quick-verify input{flex:1;padding:.7rem 1rem;border:1.5px solid var(--border2);border-radius:var(--rs);font-size:.9rem;font-family:inherit;outline:none}
-        .quick-verify input:focus{border-color:var(--blue)}
+        .quick-verify{display:flex;gap:.5rem;margin-bottom:.5rem}
+        .quick-verify input{flex:1;padding:.75rem 1rem;border:1.5px solid var(--border2);border-radius:var(--rs);font-size:.92rem;font-family:inherit;outline:none;transition:.2s}
+        .quick-verify input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 
         /* ── Buttons ── */
-        .btn{padding:.5rem 1rem;border-radius:var(--rs);font-size:.84rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;justify-content:center}
-        .btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:var(--blue-d)}
-        .btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#059669}
-        .btn-ghost{background:transparent;color:var(--t2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--s2)}
-        .btn-red{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,.2)}.btn-red:hover{background:rgba(239,68,68,.08)}
+        .btn{padding:.55rem 1.1rem;border-radius:var(--rs);font-size:.85rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;justify-content:center;position:relative;overflow:hidden}
+        .btn-blue{background:linear-gradient(135deg,var(--blue-d),var(--blue));color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+        .btn-blue:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,.35)}
+        .btn-green{background:linear-gradient(135deg,#059669,var(--green));color:#fff;box-shadow:0 2px 8px rgba(16,185,129,.25)}
+        .btn-green:hover{transform:translateY(-1px)}
+        .btn-ghost{background:transparent;color:var(--t2);border:1px solid var(--border)}
+        .btn-ghost:hover{background:var(--s2);border-color:var(--border2)}
+        .btn-red{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,.2)}
+        .btn-red:hover{background:var(--red-50)}
         .btn-full{width:100%}
-        .btn-lg{padding:.7rem 1.5rem;font-size:.92rem}
+        .btn-lg{padding:.8rem 1.5rem;font-size:.95rem}
 
         /* ── Badge ── */
-        .badge{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+        .badge{display:inline-block;padding:.22rem .65rem;border-radius:999px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
         .badge-free{background:var(--s2);color:var(--muted)}
         .badge-starter{background:#dbeafe;color:var(--blue-d)}
         .badge-pro{background:#e0e7ff;color:#4f46e5}
@@ -101,27 +160,29 @@
 
         /* ── Table ── */
         .tbl{width:100%;border-collapse:collapse;font-size:.85rem}
-        .tbl th{text-align:left;padding:.6rem .5rem;border-bottom:2px solid var(--border);color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
-        .tbl td{padding:.6rem .5rem;border-bottom:1px solid var(--border)}
-        .tbl tr:hover{background:var(--s2)}
-        .empty-state{text-align:center;color:var(--muted);padding:2rem 1rem;font-size:.88rem}
-
-        /* ── Key rows ── */
-        .key-row{display:flex;align-items:center;gap:.6rem;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.85rem}
-        .key-masked{font-family:'JetBrains Mono',monospace;color:var(--t2);flex:1;font-size:.8rem}
+        .tbl th{text-align:left;padding:.65rem .6rem;border-bottom:2px solid var(--border);color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+        .tbl td{padding:.7rem .6rem;border-bottom:1px solid var(--border)}
+        .tbl tbody tr{transition:background .15s}
+        .tbl tbody tr:hover{background:var(--s2)}
+        .empty-state{text-align:center;color:var(--muted);padding:2.5rem 1rem;font-size:.88rem}
+        .empty-state a{color:var(--blue);font-weight:600}
 
         /* ── Profile form ── */
         .form-group{margin-bottom:1rem}
-        .form-label{display:block;font-size:.82rem;font-weight:600;color:var(--t2);margin-bottom:.35rem}
-        .form-input{width:100%;padding:.65rem .9rem;border:1.5px solid var(--border2);border-radius:var(--rs);font-size:.9rem;font-family:inherit;outline:none}
-        .form-input:focus{border-color:var(--blue)}
-
+        .form-label{display:block;font-size:.8rem;font-weight:600;color:var(--t2);margin-bottom:.35rem}
+        .form-input{width:100%;padding:.7rem .9rem;border:1.5px solid var(--border2);border-radius:var(--rs);font-size:.92rem;font-family:inherit;outline:none;transition:.2s}
+        .form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
         .err{color:var(--red);font-size:.85rem;min-height:1.2em}
         .ok{color:var(--green);font-size:.85rem;min-height:1.2em}
 
+        /* ── Skeleton loader ── */
+        .skeleton{background:linear-gradient(90deg,var(--s2) 25%,#e2e8f0 50%,var(--s2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
         /* ── Mobile ── */
-        .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:45}
-        .overlay.show{display:block}
+        .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:45;backdrop-filter:blur(2px)}
+        .overlay.show{display:block;animation:fadeIn .2s}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @media(max-width:900px){
             .stats-grid{grid-template-columns:1fr}
             .sidebar{transform:translateX(-100%)}
@@ -134,21 +195,17 @@
 <body>
 
 <div id="gate"><div class="spin"></div><p style="color:var(--muted);font-size:.85rem">Loading your dashboard…</p></div>
-
-<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+<div class="overlay" id="overlay" onclick="toggleSidebar(false)"></div>
 
 <div class="layout">
     <!-- ==================== SIDEBAR ==================== -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-            <img src="/assets/logo.png" alt="TrueSendy">
-        </div>
+        <div class="sidebar-logo"><img src="/assets/logo.png" alt="TrueSendy"></div>
         <nav class="sidebar-nav">
             <div class="sidebar-section">Main</div>
             <button class="sidebar-link active" data-panel="overview" onclick="showPanel('overview')"><span class="ico">📊</span> Overview</button>
             <a href="/emailcheckup" class="sidebar-link"><span class="ico">📧</span> Verify Emails</a>
             <button class="sidebar-link" data-panel="tasks" onclick="showPanel('tasks')"><span class="ico">📋</span> Tasks &amp; Results</button>
-
             <div class="sidebar-section">Account</div>
             <a href="/buycredits" class="sidebar-link"><span class="ico">💳</span> Buy Credits</a>
             <button class="sidebar-link" data-panel="credits" onclick="showPanel('credits')"><span class="ico">📈</span> Credits History</button>
@@ -156,6 +213,7 @@
             <button class="sidebar-link" data-panel="profile" onclick="showPanel('profile')"><span class="ico">👤</span> My Profile</button>
         </nav>
         <div class="sidebar-credits">
+            <div class="sc-label">Balance</div>
             <div class="sc-row"><span>Total Credits</span><strong id="sb-credits">0</strong></div>
             <div class="sc-row"><span>Plan</span><strong id="sb-plan" style="text-transform:capitalize">free</strong></div>
             <a href="/buycredits" class="btn-add-credits">+ Add Credits</a>
@@ -172,13 +230,11 @@
             <div class="topbar-right">
                 <div class="user-menu" id="user-menu" onclick="toggleUserMenu()">
                     <div class="user-avatar" id="user-avatar">U</div>
-                    <div>
-                        <div class="user-name" id="user-name">User</div>
-                        <div class="user-sub">Click for options</div>
-                    </div>
+                    <div><div class="user-name" id="user-name">User</div><div class="user-sub">Click for options</div></div>
                     <div class="user-dropdown" id="user-dropdown">
                         <button onclick="showPanel('profile')">👤 My Profile</button>
-                        <a href="/key">💳 Buy Credits</a>
+                        <a href="/buycredits">💳 Buy Credits</a>
+                        <a href="/emailcheckup">📧 Verify Emails</a>
                         <button class="danger" onclick="logout()">🚪 Log Out</button>
                     </div>
                 </div>
@@ -189,36 +245,62 @@
             <!-- ══════════════ OVERVIEW ══════════════ -->
             <div class="panel active" id="panel-overview">
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="sc-icon blue">💰</div>
+                    <div class="stat-card" data-grad="blue">
+                        <div class="sc-top"><div class="sc-icon blue">💰</div><span class="sc-trend">Available</span></div>
                         <div class="sc-label">Total Credits</div>
-                        <div class="sc-value" id="ov-credits">0</div>
+                        <div class="sc-value" id="ov-credits" data-count="0">0</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="sc-icon green">✅</div>
-                        <div class="sc-label">Plan</div>
-                        <div class="sc-value" style="font-size:1.2rem;text-transform:capitalize" id="ov-plan">free</div>
+                    <div class="stat-card" data-grad="green">
+                        <div class="sc-top"><div class="sc-icon green">✅</div><span class="sc-trend" id="ov-plan-trend">Current</span></div>
+                        <div class="sc-label">Your Plan</div>
+                        <div class="sc-value" style="font-size:1.5rem;text-transform:capitalize" id="ov-plan">free</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="sc-icon amber">📧</div>
-                        <div class="sc-label">Lifetime Verified</div>
-                        <div class="sc-value" id="ov-lifetime">0</div>
+                    <div class="stat-card" data-grad="purple">
+                        <div class="sc-top"><div class="sc-icon purple">📧</div><span class="sc-trend">All-time</span></div>
+                        <div class="sc-label">Emails Verified</div>
+                        <div class="sc-value" id="ov-lifetime" data-count="0">0</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Verification Activity</h3>
+                        <div class="ch-sub">Last 7 days</div>
+                        <div class="bar-chart" id="bar-chart"><!-- bars injected by JS --></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Results Breakdown</h3>
+                        <div class="ch-sub">From recent jobs</div>
+                        <div class="donut-wrap">
+                            <div class="donut" id="donut-chart">
+                                <svg width="150" height="150" viewBox="0 0 150 150">
+                                    <circle cx="75" cy="75" r="60" fill="none" stroke="#f1f5f9" stroke-width="18"/>
+                                    <circle id="donut-valid" cx="75" cy="75" r="60" fill="none" stroke="#10b981" stroke-width="18" stroke-linecap="round" stroke-dasharray="0 377" style="transition:stroke-dasharray 1s ease"/>
+                                </svg>
+                                <div class="donut-center"><div class="dc-num" id="dc-total">0</div><div class="dc-lbl">Verified</div></div>
+                            </div>
+                            <div class="donut-legend">
+                                <div class="leg-item"><span class="leg-dot" style="background:#10b981"></span>Valid <span class="leg-val" id="leg-valid">0</span></div>
+                                <div class="leg-item"><span class="leg-dot" style="background:#ef4444"></span>Invalid <span class="leg-val" id="leg-invalid">0</span></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card">
                     <h3>⚡ Quick Verify</h3>
-                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem">Verify a single email or open the full bulk verification tool.</p>
+                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:.85rem">Check a single email instantly, or open the full bulk tool.</p>
                     <div class="quick-verify">
                         <input type="email" id="quick-email" placeholder="Enter an email to verify...">
                         <button class="btn btn-blue" onclick="quickVerify()">Verify</button>
                     </div>
-                    <div id="quick-result" style="font-size:.85rem;min-height:1.2em"></div>
-                    <a href="/emailcheckup" class="btn btn-green btn-lg btn-full" style="margin-top:.75rem">Open Full Verification Tool →</a>
+                    <div id="quick-result" style="font-size:.85rem;min-height:1.4em;margin-top:.4rem"></div>
+                    <a href="/emailcheckup" class="btn btn-green btn-lg btn-full" style="margin-top:.85rem">Open Full Verification Tool →</a>
                 </div>
 
                 <div class="card">
-                    <h3>📋 Recent Activity</h3>
+                    <h3>📋 Recent Jobs</h3>
                     <div id="ov-recent"></div>
                 </div>
             </div>
@@ -227,7 +309,7 @@
             <div class="panel" id="panel-tasks">
                 <div class="card">
                     <h3>📋 Verification History</h3>
-                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Your past verification jobs. Results are kept for 7 days for re-download.</p>
+                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Past jobs — results kept for 7 days for re-download.</p>
                     <div id="tasks-list"></div>
                 </div>
             </div>
@@ -235,8 +317,8 @@
             <!-- ══════════════ CREDITS HISTORY ══════════════ -->
             <div class="panel" id="panel-credits">
                 <div class="card">
-                    <h3>📈 Credits Usage History</h3>
-                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Every verification deducts credits. Here's your recent usage.</p>
+                    <h3>📈 Credits Usage</h3>
+                    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Every verification deducts credits. History auto-clears after 7 days.</p>
                     <div id="credits-full-list"></div>
                 </div>
             </div>
@@ -245,9 +327,7 @@
             <div class="panel" id="panel-bot">
                 <div class="card">
                     <h3>🖥️ TrueSendy Desktop Bot</h3>
-                    <div id="bot-access-zone" style="text-align:center;padding:1rem 0">
-                        <div style="color:var(--muted);font-size:.85rem">Checking access…</div>
-                    </div>
+                    <div id="bot-access-zone" style="text-align:center;padding:1rem 0"><div style="color:var(--muted)">Checking access…</div></div>
                     <div id="bot-access-note" style="font-size:.8rem;color:var(--muted);margin-top:.75rem;text-align:center;line-height:1.5"></div>
                 </div>
             </div>
@@ -265,10 +345,7 @@
                 </div>
                 <div class="card">
                     <h3>🔒 Change Password</h3>
-                    <div class="form-group">
-                        <label class="form-label">New Password</label>
-                        <input type="password" class="form-input" id="pf-newpass" placeholder="Enter new password (min 6 chars)">
-                    </div>
+                    <div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-input" id="pf-newpass" placeholder="Enter new password (min 6 chars)"></div>
                     <div id="pf-pass-msg" class="ok"></div>
                     <button class="btn btn-blue" style="margin-top:.5rem" onclick="changePassword()">Update Password</button>
                 </div>
@@ -279,7 +356,7 @@
 
 <script>
 const token = localStorage.getItem('ts_token');
-let dashData = null;   // cached dashboard-stats response
+let dashData = null;
 
 // ═══════════════════ INIT ═══════════════════
 (async function() {
@@ -299,26 +376,23 @@ let dashData = null;   // cached dashboard-stats response
         document.getElementById('sb-credits').textContent = Number(total).toLocaleString();
         document.getElementById('sb-plan').textContent = statsRes.plan || 'free';
 
-        // Top bar user
-        const initials = (u.username || u.email || 'U').slice(0, 2).toUpperCase();
-        document.getElementById('user-avatar').textContent = initials;
+        // Top bar
+        document.getElementById('user-avatar').textContent = (u.username || u.email || 'U').slice(0, 2).toUpperCase();
         document.getElementById('user-name').textContent = '@' + u.username;
 
-        // Overview
-        document.getElementById('ov-credits').textContent = Number(total).toLocaleString();
+        // Overview stat cards (animated count-up)
+        animateCount('ov-credits', total);
         document.getElementById('ov-plan').textContent = statsRes.plan || 'free';
-        document.getElementById('ov-lifetime').textContent = Number(statsRes.tokensUsed || 0).toLocaleString();
+        animateCount('ov-lifetime', statsRes.tokensUsed || 0);
 
-        // Recent activity (last 5 jobs)
+        // Charts
+        renderBarChart(statsRes.usageLog || []);
+        renderDonut(statsRes.jobHistory || []);
+
+        // Recent jobs
         renderRecentJobs(statsRes.jobHistory || []);
-
-        // Tasks table
         renderTasks(statsRes.jobHistory || []);
-
-        // Credits history (full)
         renderCreditsFull(statsRes.usageLog || []);
-
-        // Bot access
         loadBotAccess(statsRes);
 
         // Profile
@@ -331,7 +405,6 @@ let dashData = null;   // cached dashboard-stats response
             ? new Date(statsRes.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recently';
         document.getElementById('pf-lifetime').textContent = Number(statsRes.tokensUsed || 0).toLocaleString();
 
-        // Show everything
         document.getElementById('gate').style.display = 'none';
     } catch (e) {
         console.error('Dashboard init error:', e);
@@ -340,44 +413,94 @@ let dashData = null;   // cached dashboard-stats response
     }
 })();
 
+// ═══════════════════ COUNT-UP ANIMATION ═══════════════════
+function animateCount(elId, target) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const duration = 900;
+    const start = performance.now();
+    function tick(now) {
+        const p = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);  // ease-out cubic
+        el.textContent = Math.floor(target * eased).toLocaleString();
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = Number(target).toLocaleString();
+    }
+    requestAnimationFrame(tick);
+}
+
+// ═══════════════════ BAR CHART (7-day activity) ═══════════════════
+function renderBarChart(usageLog) {
+    const el = document.getElementById('bar-chart');
+    if (!el) return;
+    // Group usage by day for the last 7 days
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
+        days.push({ date: d, count: 0, label: d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0,1) });
+    }
+    (usageLog || []).forEach(h => {
+        const d = new Date(h.ts); d.setHours(0,0,0,0);
+        const day = days.find(x => x.date.getTime() === d.getTime());
+        if (day) day.count += (h.amount || 0);
+    });
+    const max = Math.max(...days.map(d => d.count), 1);
+    const today = new Date(); today.setHours(0,0,0,0);
+    el.innerHTML = days.map(d => {
+        const h = Math.max((d.count / max) * 100, 2);
+        const isToday = d.date.getTime() === today.getTime();
+        return `<div class="bar-col">
+            <div class="bar ${isToday?'today':''}" style="height:${h}%" title="${d.count} emails"></div>
+            <div class="bar-label">${d.label}</div>
+        </div>`;
+    }).join('');
+}
+
+// ═══════════════════ DONUT CHART (valid vs invalid) ═══════════════════
+function renderDonut(jobHistory) {
+    let valid = 0, invalid = 0;
+    (jobHistory || []).forEach(j => { valid += (j.valid || 0); invalid += (j.invalid || 0); });
+    const total = valid + invalid;
+    document.getElementById('dc-total').textContent = total.toLocaleString();
+    document.getElementById('leg-valid').textContent = valid.toLocaleString();
+    document.getElementById('leg-invalid').textContent = invalid.toLocaleString();
+    const circ = 2 * Math.PI * 60;  // ~377
+    const validPct = total > 0 ? (valid / total) : 0;
+    const arc = circ * validPct;
+    const donutValid = document.getElementById('donut-valid');
+    donutValid.setAttribute('stroke-dasharray', `${arc} ${circ - arc}`);
+    donutValid.setAttribute('stroke', valid >= invalid ? '#10b981' : '#ef4444');
+}
+
 // ═══════════════════ PANEL SWITCHING ═══════════════════
 function showPanel(name) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     const el = document.getElementById('panel-' + name);
     if (el) el.classList.add('active');
     document.querySelectorAll('[data-panel]').forEach(b => b.classList.remove('active'));
-    const links = document.querySelectorAll(`[data-panel="${name}"]`);
-    links.forEach(l => l.classList.add('active'));
+    document.querySelectorAll(`[data-panel="${name}"]`).forEach(l => l.classList.add('active'));
     const titles = { overview: 'Overview', tasks: 'Tasks & Results', credits: 'Credits History', bot: 'Download Bot', profile: 'My Profile' };
     document.getElementById('topbar-title').textContent = titles[name] || 'Dashboard';
-    // Close sidebar on mobile after navigation
     if (window.innerWidth <= 900) toggleSidebar(false);
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ═══════════════════ SIDEBAR + USER MENU ═══════════════════
 function toggleSidebar(force) {
-    const sb = document.getElementById('sidebar');
-    const ov = document.getElementById('overlay');
+    const sb = document.getElementById('sidebar'), ov = document.getElementById('overlay');
     if (force === false) { sb.classList.remove('open'); ov.classList.remove('show'); return; }
     sb.classList.toggle('open'); ov.classList.toggle('show');
 }
-function toggleUserMenu() {
-    document.getElementById('user-dropdown').classList.toggle('show');
-}
+function toggleUserMenu() { document.getElementById('user-dropdown').classList.toggle('show'); }
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('#user-menu')) {
-        document.getElementById('user-dropdown').classList.remove('show');
-    }
+    if (!e.target.closest('#user-menu')) document.getElementById('user-dropdown').classList.remove('show');
 });
 
 // ═══════════════════ QUICK VERIFY ═══════════════════
 async function quickVerify() {
     const email = document.getElementById('quick-email').value.trim();
     const res = document.getElementById('quick-result');
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        res.innerHTML = '<span style="color:var(--red)">Please enter a valid email.</span>'; return;
-    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { res.innerHTML = '<span style="color:var(--red)">Please enter a valid email.</span>'; return; }
     res.innerHTML = '<span style="color:var(--muted)">Verifying…</span>';
     try {
         const r = await fetch('/api/verify-single', {
@@ -386,42 +509,28 @@ async function quickVerify() {
             body: JSON.stringify({ email })
         }).then(r => r.json());
         if (r.error) { res.innerHTML = '<span style="color:var(--red)">' + r.error + '</span>'; return; }
-        if (r.status === 'valid') {
-            res.innerHTML = '<span style="color:var(--green)">✅ ' + email + ' is VALID</span>';
-            document.getElementById('sb-credits').textContent = (parseInt(document.getElementById('sb-credits').textContent.replace(/,/g,'')) - 1).toLocaleString();
-        } else {
-            res.innerHTML = '<span style="color:var(--red)">❌ ' + email + ' is INVALID (' + (r.reasonCode || 'unknown') + ')</span>';
-        }
+        res.innerHTML = r.status === 'valid'
+            ? '<span style="color:var(--green);font-weight:600">✅ ' + email + ' is VALID</span>'
+            : '<span style="color:var(--red);font-weight:600">❌ ' + email + ' is INVALID</span>';
     } catch { res.innerHTML = '<span style="color:var(--red)">Could not reach server.</span>'; }
 }
 
 // ═══════════════════ JOBS / TASKS ═══════════════════
 function renderRecentJobs(jobs) {
     const el = document.getElementById('ov-recent');
-    if (!jobs || !jobs.length) {
-        el.innerHTML = '<div class="empty-state">No verification jobs yet. <a href="/emailcheckup" style="color:var(--blue)">Verify your first list →</a></div>';
-        return;
-    }
-    el.innerHTML = jobs.slice(0, 5).map(j => `
-        <div class="card-row">
-            <span class="lbl">${esc(j.filename || 'List')} · ${j.total} emails</span>
-            <span class="val"><span style="color:var(--green)">${j.valid}✓</span> <span style="color:var(--red)">${j.invalid}✗</span> <span style="color:var(--muted);font-size:.75rem">${timeAgo(j.date)}</span></span>
-        </div>`).join('');
+    if (!jobs || !jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. <a href="/emailcheckup">Verify your first list →</a></div>'; return; }
+    el.innerHTML = jobs.slice(0, 5).map(j => `<div class="card-row">
+        <span class="lbl">${esc(j.filename || 'List')} · ${j.total} emails</span>
+        <span class="val"><span style="color:var(--green)">${j.valid}✓</span> <span style="color:var(--red)">${j.invalid}✗</span> <span style="color:var(--muted);font-size:.75rem">${timeAgo(j.date)}</span></span>
+    </div>`).join('');
 }
-
 function renderTasks(jobs) {
     const el = document.getElementById('tasks-list');
-    if (!jobs || !jobs.length) {
-        el.innerHTML = '<div class="empty-state">No jobs yet. Once you verify a list, it will appear here with a re-download link.</div>';
-        return;
-    }
+    if (!jobs || !jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. Once you verify a list, it appears here with a re-download link.</div>'; return; }
     el.innerHTML = '<table class="tbl"><thead><tr><th>Date</th><th>File</th><th>Total</th><th>Valid</th><th>Invalid</th><th>Download</th></tr></thead><tbody>' +
         jobs.map(j => `<tr>
-            <td>${new Date(j.date).toLocaleDateString()}</td>
-            <td>${esc(j.filename || 'List')}</td>
-            <td>${j.total}</td>
-            <td style="color:var(--green)">${j.valid}</td>
-            <td style="color:var(--red)">${j.invalid}</td>
+            <td>${new Date(j.date).toLocaleDateString()}</td><td>${esc(j.filename||'List')}</td><td>${j.total}</td>
+            <td style="color:var(--green);font-weight:600">${j.valid}</td><td style="color:var(--red);font-weight:600">${j.invalid}</td>
             <td><a href="/api/download/${j.id}?format=original&category=all&token=${encodeURIComponent(token)}" class="btn btn-ghost" style="padding:.25rem .6rem;font-size:.75rem" target="_blank">⬇ CSV</a></td>
         </tr>`).join('') + '</tbody></table>';
 }
@@ -429,73 +538,50 @@ function renderTasks(jobs) {
 // ═══════════════════ CREDITS HISTORY ═══════════════════
 function renderCreditsFull(log) {
     const el = document.getElementById('credits-full-list');
-    if (!log || !log.length) {
-        el.innerHTML = '<div class="empty-state">No usage yet. Credits are deducted as you verify emails.</div>';
-        return;
-    }
-    el.innerHTML = '<table class="tbl"><thead><tr><th>When</th><th>Emails Verified</th><th>Time</th></tr></thead><tbody>' +
-        log.slice(0, 30).map(h => `<tr>
-            <td>${timeAgo(h.ts)}</td>
-            <td><strong>${h.amount}</strong></td>
-            <td style="color:var(--muted);font-size:.78rem">${new Date(h.ts).toLocaleString()}</td>
-        </tr>`).join('') + '</tbody></table>';
+    if (!log || !log.length) { el.innerHTML = '<div class="empty-state">No usage yet. Credits are deducted as you verify emails.</div>'; return; }
+    el.innerHTML = '<table class="tbl"><thead><tr><th>When</th><th>Emails</th><th>Time</th></tr></thead><tbody>' +
+        log.slice(0, 30).map(h => `<tr><td>${timeAgo(h.ts)}</td><td><strong>${h.amount}</strong></td><td style="color:var(--muted);font-size:.78rem">${new Date(h.ts).toLocaleString()}</td></tr>`).join('') + '</tbody></table>';
 }
 
 // ═══════════════════ BOT ACCESS ═══════════════════
 function loadBotAccess(stats) {
-    const zone = document.getElementById('bot-access-zone');
-    const note = document.getElementById('bot-access-note');
-
+    const zone = document.getElementById('bot-access-zone'), note = document.getElementById('bot-access-note');
     if (stats.plan === 'agency') {
-        zone.innerHTML = `
-            <div style="font-size:.9rem;color:var(--green);font-weight:600;margin-bottom:.75rem">✅ Agency access approved</div>
-            <a href="/downloads/TrueSendy-Setup.exe?token=${encodeURIComponent(token)}" class="btn btn-green btn-lg btn-full" style="max-width:300px;margin:0 auto">⬇ Download TrueSendy Bot</a>`;
-        note.textContent = 'You can download the desktop bot and use your API key to activate it.';
+        zone.innerHTML = `<div style="font-size:.9rem;color:var(--green);font-weight:600;margin-bottom:.85rem">✅ Agency access approved</div>
+            <a href="/downloads/TrueSendy-Setup.exe?token=${encodeURIComponent(token)}" class="btn btn-green btn-lg btn-full" style="max-width:320px;margin:0 auto">⬇ Download Desktop Bot</a>`;
+        note.textContent = 'Download the bot and use your API key to activate it.';
         return;
     }
-
     if (stats.agencyRequested) {
-        zone.innerHTML = `
-            <div style="font-size:.9rem;color:#1e40af;font-weight:600;margin-bottom:.5rem">⏳ Request pending admin approval</div>
-            <div style="font-size:.85rem;color:var(--muted);padding:.25rem 0">Your request has been submitted. You'll be able to download once approved.</div>`;
-        note.textContent = 'Check back after approval — the download button will appear here.';
+        zone.innerHTML = `<div style="font-size:.9rem;color:#1e40af;font-weight:600;margin-bottom:.5rem">⏳ Request pending admin approval</div>
+            <div style="font-size:.85rem;color:var(--muted);padding:.25rem 0">Your request is submitted. Download unlocks once approved.</div>`;
+        note.textContent = 'Check back after approval — the download button appears here.';
         return;
     }
-
-    zone.innerHTML = `
-        <div style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem;line-height:1.5">The desktop bot is a premium feature. Request access and an admin will review it.</div>
-        <button class="btn btn-blue btn-lg btn-full" style="max-width:300px;margin:0 auto" onclick="requestBotAccess()">🔑 Request Bot Access</button>`;
-    note.innerHTML = 'Already have a key? <a href="/key" style="color:var(--blue);font-weight:600">Buy / view keys</a>';
+    zone.innerHTML = `<div style="font-size:.85rem;color:var(--muted);margin-bottom:.85rem;line-height:1.5">The desktop bot is a premium feature. Request access and an admin will review it.</div>
+        <button class="btn btn-blue btn-lg btn-full" style="max-width:320px;margin:0 auto" onclick="requestBotAccess()">🔑 Request Bot Access</button>`;
+    note.innerHTML = 'Already have a key? <a href="/buycredits" style="color:var(--blue);font-weight:600">Buy credits</a>';
 }
-
 async function requestBotAccess() {
     const zone = document.getElementById('bot-access-zone');
-    zone.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Submitting request…</div>';
+    zone.innerHTML = '<div style="color:var(--muted);padding:1rem 0">Submitting…</div>';
     try {
-        const r = await fetch('/api/request-agency', {
-            method: 'POST', headers: { Authorization: 'Bearer ' + token }
-        }).then(r => r.json());
-        if (r.error) { zone.innerHTML = '<div style="color:var(--red);font-size:.85rem">' + r.error + '</div>'; return; }
-        zone.innerHTML = `
-            <div style="font-size:.9rem;color:var(--green);font-weight:600;margin-bottom:.5rem">✅ Request submitted!</div>
-            <div style="font-size:.85rem;color:var(--muted);padding:.25rem 0">An admin will review your request. You'll be able to download once approved.</div>`;
-    } catch {
-        zone.innerHTML = '<div style="color:var(--red);font-size:.85rem">Could not submit. Please try again.</div>';
-    }
+        const r = await fetch('/api/request-agency', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
+        if (r.error) { zone.innerHTML = '<div style="color:var(--red)">' + r.error + '</div>'; return; }
+        zone.innerHTML = `<div style="color:var(--green);font-weight:600;margin-bottom:.5rem">✅ Request submitted!</div>
+            <div style="color:var(--muted);font-size:.85rem">An admin will review it. Download unlocks once approved.</div>`;
+    } catch { zone.innerHTML = '<div style="color:var(--red)">Could not submit.</div>'; }
 }
 
 // ═══════════════════ PROFILE ═══════════════════
 async function changePassword() {
     const newPass = document.getElementById('pf-newpass').value;
     const msg = document.getElementById('pf-pass-msg');
-    if (!newPass || newPass.length < 6) {
-        msg.className = 'err'; msg.textContent = 'Password must be at least 6 characters.'; return;
-    }
+    if (!newPass || newPass.length < 6) { msg.className = 'err'; msg.textContent = 'Password must be at least 6 characters.'; return; }
     msg.className = 'ok'; msg.textContent = 'Updating…';
     try {
         const r = await fetch('/api/auth/update-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
             body: JSON.stringify({ password: newPass })
         }).then(r => r.json());
         if (r.error) { msg.className = 'err'; msg.textContent = r.error; return; }
@@ -504,22 +590,15 @@ async function changePassword() {
     } catch { msg.className = 'err'; msg.textContent = 'Could not reach server.'; }
 }
 
-// ═══════════════════ LOGOUT ═══════════════════
-function logout() {
-    localStorage.removeItem('ts_token');
-    window.location.href = '/';
-}
-
-// ═══════════════════ UTILS ═══════════════════
+// ═══════════════════ LOGOUT + UTILS ═══════════════════
+function logout() { localStorage.removeItem('ts_token'); window.location.href = '/'; }
 function timeAgo(ts) {
-    const diff = Date.now() - ts;
-    const mins = Math.floor(diff / 60000);
+    const diff = Date.now() - ts, mins = Math.floor(diff / 60000);
     if (mins < 1) return 'just now';
     if (mins < 60) return mins + 'm ago';
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return hrs + 'h ago';
-    const days = Math.floor(hrs / 24);
-    return days + 'd ago';
+    return Math.floor(hrs / 24) + 'd ago';
 }
 function esc(s) { return String(s || '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 </script>
