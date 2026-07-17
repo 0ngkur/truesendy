@@ -602,12 +602,12 @@
                         '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;text-align:center;">TrueSendy Setup 1.1.0.exe · Agency access ✓</p>';
                     showNotice('✅ Agency plan active — downloads unlocked!', '#d1fae5', '#065f46');
                 } else {
-                    // Logged in but not Agency
+                    // Logged in but not Agency — let them REQUEST access (admin approves)
                     zone.innerHTML = '<div style="text-align:center">' +
-                        '<a href="/subscribePlan?plan=agency" class="sub-btn sub-btn-primary" style="width:auto;padding:0.95rem 2rem;">Upgrade to Agency</a>' +
-                        '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Current plan: ' + (r.plan || 'free') + '</p>' +
+                        '<button id="req-agency-btn" class="sub-btn sub-btn-primary" style="width:auto;padding:0.95rem 2rem;border:none;cursor:pointer;font-family:inherit;font-size:inherit" onclick="requestAgency()">🔑 Request Agency Access</button>' +
+                        '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Current plan: ' + (r.plan || 'free') + ' · Admin approves requests</p>' +
                         '</div>';
-                    showNotice('🔒 The bot requires the Agency plan (ultra premium). Upgrade to unlock downloads.', '#fef3c7', '#92400e');
+                    showNotice('🔒 The bot is ultra-premium. Request Agency access below — an admin will review and approve.', '#fef3c7', '#92400e');
                 }
             } catch {
                 zone.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.85rem">Could not verify access. <a href="/signin?next=/downloads" style="color:var(--blue)">Sign in</a></div>';
@@ -628,11 +628,43 @@
             if (dlCanDownload && dlToken) {
                     window.location.href = '/downloads/TrueSendy-Setup.exe?token=' + encodeURIComponent(dlToken);
                 } else if (dlToken) {
-                    window.location.href = '/subscribePlan?plan=agency';
+                    // smooth-scroll to the request button
+                    document.getElementById('req-agency-btn') || document.getElementById('dl-zone');
+                    document.getElementById('dl-zone').scrollIntoView({behavior:'smooth'});
                 } else {
                     window.location.href = '/signin?next=/downloads';
                 }
             return false;
+        }
+
+        // Request Agency access (admin approves manually)
+        async function requestAgency() {
+            const token = localStorage.getItem('ts_token');
+            if (!token) { window.location.href = '/signin?next=/downloads'; return; }
+            const btn = document.getElementById('req-agency-btn');
+            btn.disabled = true;
+            btn.textContent = 'Submitting…';
+            try {
+                const r = await fetch('/api/request-agency', {
+                    method: 'POST',
+                    headers: { Authorization: 'Bearer ' + token }
+                }).then(r => r.json());
+                if (r.error) { btn.textContent = r.error; btn.disabled = false; return; }
+                if (r.status === 'already_agency') {
+                    btn.textContent = '✓ Already Agency';
+                    showNotice('✅ You already have Agency access. Refresh the page to download.', '#d1fae5', '#065f46');
+                } else if (r.status === 'already_requested') {
+                    btn.textContent = '⏳ Request Pending';
+                    showNotice('⏳ Your request is already pending admin approval. You\'ll get access once approved.', '#dbeafe', '#1e40af');
+                } else {
+                    btn.textContent = '✓ Request Sent';
+                    showNotice('✅ Request submitted! An admin will review it. You\'ll be able to download once approved.', '#d1fae5', '#065f46');
+                }
+            } catch {
+                btn.textContent = 'Request Agency Access';
+                btn.disabled = false;
+                showNotice('⚠ Could not submit request. Please try again.', '#fef2f2', '#991b1b');
+            }
         }
     </script>
 </body>

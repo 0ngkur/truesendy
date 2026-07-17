@@ -713,6 +713,12 @@
                     <div class="header-actions">
                         <button class="btn btn-ghost" onclick="refreshData()">🔄 Refresh</button>
                     </div>
+
+                <!-- Agency approval requests (shown when pending) -->
+                <div id="agency-requests-box" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.5rem">
+                    <div style="font-weight:700;color:#92400e;margin-bottom:0.5rem">🔑 Agency Access Requests <span id="agency-req-count" style="background:#f59e0b;color:#fff;padding:1px 8px;border-radius:999px;font-size:0.75rem;margin-left:4px">0</span></div>
+                    <div id="agency-requests-list"></div>
+                </div>
                 </div>
 
                 <div class="stats-grid" id="stats-grid">
@@ -1052,6 +1058,13 @@
                 const usersData = await usersRes.json();
                 allUsers = usersData.users || [];
 
+                // Load pending Agency requests
+                try {
+                    const reqRes = await fetch('/api/admin/agency-requests', { headers: adminHeaders() });
+                    const reqData = await reqRes.json();
+                    renderAgencyRequests(reqData.requests || []);
+                } catch {}
+
                 // Update stats
                 document.getElementById('st-total').textContent = stats.totalUsers.toLocaleString();
                 document.getElementById('st-verified').textContent = stats.verifiedUsers.toLocaleString();
@@ -1077,6 +1090,40 @@
         }
 
         // ── RENDER: Recent users (dashboard) ──
+        // ── Agency approval requests ──
+        async function renderAgencyRequests(requests) {
+            const box = document.getElementById('agency-requests-box');
+            const list = document.getElementById('agency-requests-list');
+            const count = document.getElementById('agency-req-count');
+            if (!requests.length) { box.style.display = 'none'; return; }
+            box.style.display = 'block';
+            count.textContent = requests.length;
+            list.innerHTML = requests.map(r => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid #fde68a">
+                    <div>
+                        <strong>${esc(r.email)}</strong>
+                        <span style="color:#92400e;font-size:0.8rem;margin-left:6px">@${esc(r.username)}</span>
+                        <span style="color:#a16207;font-size:0.72rem;margin-left:6px">${r.agencyRequestedAt ? new Date(r.agencyRequestedAt).toLocaleDateString() : ''}</span>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn btn-blue" style="padding:0.35rem 0.9rem;font-size:0.8rem" onclick="approveAgencyReq('${r.id}')">✓ Approve</button>
+                        <button class="btn btn-ghost" style="padding:0.35rem 0.9rem;font-size:0.8rem" onclick="denyAgencyReq('${r.id}')">✕ Deny</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        async function approveAgencyReq(id) {
+            const r = await fetch('/api/admin/agency-requests/' + id + '/approve', { method:'POST', headers: adminHeaders() }).then(r=>r.json());
+            if (r.error) { alert(r.error); return; }
+            refreshData();
+        }
+        async function denyAgencyReq(id) {
+            const r = await fetch('/api/admin/agency-requests/' + id + '/deny', { method:'POST', headers: adminHeaders() }).then(r=>r.json());
+            if (r.error) { alert(r.error); return; }
+            refreshData();
+        }
+        function esc(s) { return String(s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
         function renderRecentUsers() {
             const body = document.getElementById('recent-users-body');
             const recent = [...allUsers].filter(u => u.role !== 'subadmin').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);

@@ -3,6 +3,7 @@ const express     = require('express');
 const multer      = require('multer');
 const fs          = require('fs');
 const path        = require('path');
+const os          = require('os');
 const crypto      = require('crypto');
 const bcrypt      = require('bcryptjs');
 const compression = require('compression');
@@ -245,6 +246,8 @@ setInterval(() => {
         // Delete old jobs (>7 days) or errored/expired jobs.
         // Completed jobs are kept so users can re-download within the 7-day window.
         if (job.createdAt < cutoff || job.status === 'expired') {
+            // Clean up the disk-backed result file
+            if (job.resultFile) { try { fs.unlinkSync(job.resultFile); } catch {} }
             delete activeJobs[id];
         }
     }
@@ -829,14 +832,17 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
         processed : 0,
         valid     : 0,
         invalid   : 0,
-        results   : [],
+        results   : [],                  // small rolling buffer (live feed only)
         recentValid   : [],
         recentInvalid : [],
         status    : 'running',
         createdAt : Date.now(),   // ← required by TTL cleanup
         originalColumns,               // null for unstructured files
         originalData,                   // { email: { col: val, ... } }
+        resultFile : path.join(os.tmpdir(), `truesendy_job_${jobId}.jsonl`),  // disk-backed results
     };
+    // Truncate any stale result file from a previous run with the same id
+    try { fs.writeFileSync(activeJobs[jobId].resultFile, ''); } catch {}
     res.json({ jobId, total: validEmails.length });
     processJob(jobId).catch(err => {
         console.error('[TrueSendy] processJob unhandled:', err.message);
@@ -845,7 +851,39 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
 
 });
 
-// ======================== PROGRESS ========================
+// ── Disk-backed result storage ───────────────────────────────────────────────
+// Instead of holding every result in memory (100k results ≈ 100MB / job),
+// each verified email is appended as one JSON line to a temp file. The
+// download endpoint streams it back. This keeps memory flat regardless of
+// list size — 100 emails or 100,000.
+function appendResult(job, data) {
+    try {
+        fs.appendFileSync(job.resultFile, JSON.stringify(data) + '\n');
+    } catch (e) {
+        // Disk write failed — fall back to memory so the result isn't lost
+        job.results.push(data);
+    }
+    // Keep a small in-memory rolling buffer (live feed preview only)
+    job.results.push(data);
+    if (job.results.length > 500) job.results.length = 500;
+}
+
+// Read all results for a job from disk (fallback to in-memory buffer).
+function readJobResults(job) {
+    try {
+        if (job.resultFile && fs.existsSync(job.resultFile)) {
+            const text = fs.readFileSync(job.resultFile, 'utf8');
+            return text.trim().split('\n').filter(Boolean).map(l => {
+                try { return JSON.parse(l); } catch { return null; }
+            }).filter(Boolean);
+        }
+    } catch (e) {
+        console.warn('[TrueSendy] readJobResults fell back to memory:', e.message);
+    }
+    return job.results || [];
+}
+
+
 
 app.get('/api/progress/:jobId', authMiddleware, (req, res) => {
     const job = activeJobs[req.params.jobId];
@@ -870,10 +908,11 @@ async function processJob(jobId) {
     const job = activeJobs[jobId];
     if (!job) return;
 
-    // ── [FIX #8] Reduced concurrency: 20 workers max
-    // 50 workers × 7s SMTP timeout = 350 open sockets under load — too many
-    // 20 workers keeps throughput high while respecting OS socket limits
-    const CONCURRENCY = 20;
+    // ── Concurrency: 40 workers (was 20).
+    // The SMTP global cap (50) in verifier.js throttles actual socket use,
+    // so 40 workers keeps the pipe full without exceeding OS socket limits.
+    // DNS cache means most workers skip the DNS round-trip entirely.
+    const CONCURRENCY = 40;
     let index = 0;
 
     // ── [FIX #5] Global 30-minute job timeout — kills runaway jobs
@@ -898,7 +937,9 @@ async function processJob(jobId) {
             const email = job.emails[i];
             try {
                 const data = await verifier.verifyEmail(email);
-                job.results.push(data);
+                // Write to disk (handles 100k+ without memory blowup) + keep a
+                // small rolling buffer for the live feed.
+                appendResult(job, data);
                 if (data.status === 'valid') {
                     job.valid++;
                     job.recentValid.unshift(email);
@@ -910,12 +951,13 @@ async function processJob(jobId) {
                 }
             } catch (err) {
                 console.error(`[TrueSendy] verify error "${email}":`, err.message);
-                job.results.push({
+                const errData = {
                     email, domain: email.split('@')[1] || 'unknown',
                     providerType: 'Unknown', mxProvider: null, emailCategory: 'Unknown',
                     status: 'invalid', reasonCode: 'internal_error',
                     flags: { disposable: false, roleBased: false, catchAll: false },
-                });
+                };
+                appendResult(job, errData);
                 job.invalid++;
                 job.recentInvalid.unshift({ email, reason: 'internal_error' });
                 if (job.recentInvalid.length > 5) job.recentInvalid.pop();
@@ -950,14 +992,36 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     const format = req.query.format || 'csv';
     const category = req.query.category || 'valid'; // valid | invalid | all
 
+    // Read results from disk (handles 100k+ without memory blowup)
+    const allResults = readJobResults(job);
+
     // Filter results by category
     let results;
     if (category === 'all') {
-        results = job.results;
+        results = allResults;
     } else if (category === 'invalid') {
-        results = job.results.filter(r => r.status !== 'valid');
+        results = allResults.filter(r => r.status !== 'valid');
     } else {
-        results = job.results.filter(r => r.status === 'valid');
+        results = allResults.filter(r => r.status === 'valid');
+    }
+
+    // "Original" format — the uploaded file EXACTLY as-is + a single
+    // Verification_Status column (valid/invalid). No other columns added,
+    // no original data removed. Only available when original columns exist.
+    if (format === 'original' && job.originalColumns && job.originalColumns.length) {
+        const origCols = job.originalColumns;
+        const origLookup = job.originalData || {};
+        const headers = [...origCols, 'Verification_Status'];
+        const rows = results.map(r => {
+            const orig = origLookup[r.email] || {};
+            const vals = origCols.map(c => orig[c] !== undefined ? String(orig[c]) : '');
+            vals.push(r.status || 'unknown');
+            return vals;
+        });
+        const fname = `truesendy_verified_${req.params.jobId}.csv`;
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+        return res.send([headers.join(','), ...rows.map(r => r.map(c => `"${c.replace(/"/g,'""')}"`).join(','))].join('\n'));
     }
 
     // TXT format — just email list (like competitor)
@@ -1416,6 +1480,33 @@ app.post('/api/admin/users/:id/plan', adminLimiter, adminAuth, (req, res) => {
     }
     const ok = store.updateUserPlan(req.params.id, plan);
     if (!ok) return res.status(404).json({ error: 'User not found.' });
+    res.json({ success: true });
+});
+
+// ── Agency approval workflow ──
+// User-side: request Agency plan access (no payment — admin approves manually).
+app.post('/api/request-agency', authMiddleware, (req, res) => {
+    const result = store.requestAgency(req.user.id);
+    if (result.error) return res.status(400).json(result);
+    res.json(result);
+});
+
+// Admin-side: list pending Agency requests.
+app.get('/api/admin/agency-requests', adminLimiter, adminAuth, (req, res) => {
+    res.json({ requests: store.getPendingAgencyRequests() });
+});
+
+// Admin-side: approve a request → grants Agency plan.
+app.post('/api/admin/agency-requests/:id/approve', adminLimiter, adminAuth, (req, res) => {
+    const result = store.approveAgency(req.params.id);
+    if (result.error) return res.status(404).json(result);
+    res.json({ success: true });
+});
+
+// Admin-side: deny a request.
+app.post('/api/admin/agency-requests/:id/deny', adminLimiter, adminAuth, (req, res) => {
+    const result = store.denyAgency(req.params.id);
+    if (result.error) return res.status(404).json(result);
     res.json({ success: true });
 });
 

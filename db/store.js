@@ -297,6 +297,63 @@ function upgradePlan(userId, plan) {
     return true;
 }
 
+// ── Agency approval workflow ─────────────────────────────────────────────────
+// Agency plan (bot download access) is granted manually by the admin.
+// Flow: user requests → admin approves → user.plan = 'agency'.
+
+// User requests Agency plan access. Returns { ok, status } where status is
+// 'requested' (new) or 'already_requested' or 'already_agency'.
+function requestAgency(userId) {
+    const db = loadDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { error: 'User not found.' };
+    if (user.plan === 'agency') return { ok: true, status: 'already_agency' };
+    if (user.agencyRequested) return { ok: true, status: 'already_requested' };
+    user.agencyRequested = true;
+    user.agencyRequestedAt = new Date().toISOString();
+    saveDB(db);
+    return { ok: true, status: 'requested' };
+}
+
+// Admin approves a user's Agency request.
+function approveAgency(userId) {
+    const db = loadDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { error: 'User not found.' };
+
+    const planCredits = { agency: 100000 };
+    user.plan = 'agency';
+    user.planCredits = planCredits.agency;
+    user.agencyRequested = false;
+    user.agencyApprovedAt = new Date().toISOString();
+    saveDB(db);
+    return { ok: true };
+}
+
+// Admin denies / revokes an Agency request.
+function denyAgency(userId) {
+    const db = loadDB();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { error: 'User not found.' };
+    user.agencyRequested = false;
+    saveDB(db);
+    return { ok: true };
+}
+
+// Returns all users with a pending Agency request.
+function getPendingAgencyRequests() {
+    const db = loadDB();
+    return db.users
+        .filter(u => u.agencyRequested && u.plan !== 'agency')
+        .map(u => ({
+            id: u.id,
+            email: u.email,
+            username: u.username,
+            agencyRequestedAt: u.agencyRequestedAt,
+            createdAt: u.createdAt,
+        }));
+}
+
 // ======================== OTP OPERATIONS ========================
 
 function storeOTP(email, otp, purpose) {
@@ -694,6 +751,10 @@ module.exports = {
     stampApiUse,
     markBotDownloaded,
     upgradePlan,
+    requestAgency,
+    approveAgency,
+    denyAgency,
+    getPendingAgencyRequests,
     storeOTP,
     verifyOTP,
     // Admin
