@@ -449,14 +449,22 @@ nav{
         </button>
       </div>
       <div class="download-grid">
-        <button class="btn-dl primary" id="dl-csv">
-          <span class="emoji">📥</span> Download CSV
+        <button class="btn-dl primary" id="dl-original" style="grid-column:1/-1">
+          <span class="emoji">✅</span> Download Original File + Status (valid/invalid beside each email)
+        </button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;margin-bottom:12px;text-align:center">
+        Your uploaded file with a new <strong>Verification_Status</strong> column right beside the email — nothing erased.
+      </div>
+      <div class="download-grid">
+        <button class="btn-dl" id="dl-csv">
+          <span class="emoji">📥</span> Rich CSV
         </button>
         <button class="btn-dl" id="dl-txt">
-          <span class="emoji">📃</span> Download TXT
+          <span class="emoji">📃</span> TXT (emails only)
         </button>
         <button class="btn-dl" id="dl-excel">
-          <span class="emoji">📊</span> Download Excel
+          <span class="emoji">📊</span> Excel
         </button>
       </div>
       <div class="preview-label" id="preview-label">Preview — valid emails in your list</div>
@@ -761,6 +769,8 @@ async function showResults(validCount, total) {
   } catch {}
 
   // Wire download buttons
+  const dlOrig = document.getElementById('dl-original');
+  if (dlOrig) dlOrig.onclick = () => downloadResult('original');
   document.getElementById('dl-csv').onclick   = () => downloadResult('csv');
   document.getElementById('dl-txt').onclick   = () => downloadResult('txt');
   document.getElementById('dl-excel').onclick = () => downloadResult('excel');
@@ -779,10 +789,12 @@ function selectCategory(cat) {
 
 async function downloadResult(fmt) {
   if (!finalJobId) return;
-  const fmtMap = { csv:'csv', txt:'txt', excel:'excel' };
-  const extMap = { csv:'csv', txt:'txt', excel:'xlsx' };
+  const fmtMap = { original:'original', csv:'csv', txt:'txt', excel:'excel' };
+  const extMap = { original:'csv', csv:'csv', txt:'txt', excel:'xlsx' };
+  // 'original' always exports ALL results (valid + invalid) so every email gets a status
+  const cat = fmt === 'original' ? 'all' : downloadCategory;
   try {
-    const r = await fetch('/api/download/' + finalJobId + '?format=' + fmtMap[fmt] + '&category=' + downloadCategory, {
+    const r = await fetch('/api/download/' + finalJobId + '?format=' + fmtMap[fmt] + '&category=' + cat, {
       headers: { Authorization: 'Bearer ' + token }
     });
     if (!r.ok) { toast('Download failed', 'error'); return; }
@@ -790,7 +802,9 @@ async function downloadResult(fmt) {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'truesendy_valid_emails.' + extMap[fmt];
+    a.download = fmt === 'original'
+      ? 'truesendy_verified_with_status.csv'
+      : 'truesendy_' + downloadCategory + '.' + extMap[fmt];
     a.click();
     URL.revokeObjectURL(url);
     toast('Download started ✓', 'success');

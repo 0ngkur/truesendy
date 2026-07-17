@@ -6,6 +6,8 @@ let auth = { mode: null, token: null, key: null };   // mode: 'token' | 'key'
 let cfg   = { host: 'https://truesendy.com' };
 let currentEmails = [];
 let lastResults   = [];
+let originalColumns = null;   // preserved file headers (CSV/XLSX)
+let originalData    = {};     // { email: { col: val, ... } }
 let pendingEmail  = null;   // email of the account being created (for OTP verify)
 
 // ── init ─────────────────────────────────────────────────────────────────────
@@ -196,6 +198,8 @@ async function pickFile() {
     if (r.canceled) return;
     if (r.error) { $('file-info').innerHTML = '<span style="color:var(--red)">✗ ' + r.error + '</span>'; return; }
     currentEmails = r.emails;
+    originalColumns = r.originalColumns || null;
+    originalData = r.originalData || {};
     $('file-info').innerHTML = `📄 <strong>${r.emails.length}</strong> email${r.emails.length === 1 ? '' : 's'} found &nbsp;<span style="color:var(--muted)">${shortPath(r.filePath)}</span>`;
     $('verify-btn').disabled = false;
 }
@@ -230,7 +234,7 @@ async function runVerify() {
             skipped += (r.skipped || 0);
             renderProgress(i + slice.length, currentEmails.length, valid, invalid, skipped);
         }
-        $('export-btn').disabled = valid === 0;
+        $('export-btn').disabled = (valid + invalid) === 0;
         loadBalance();
     } catch (e) {
         $('file-info').innerHTML = '<span style="color:var(--red)">✗ Network error — check the server URL in ⚙ Settings.</span>';
@@ -275,6 +279,33 @@ function selectCatElec(cat) {
     document.querySelector(`.cat-btn-electron[data-cat="${cat}"]`).classList.add('active');
 }
 
+// ── export: original file + status column (PREFERRED) ─────────────────────────
+// Writes the uploaded file EXACTLY as-is + a Verification_Status column
+// inserted RIGHT NEXT TO the email column. Nothing erased.
+function buildOriginalWithStatus(results) {
+    if (!originalColumns || !originalColumns.length) return null;
+    const emailColRe = /^[ \t]*e-?mail[ \t]*(address)?$/i;
+    let emailIdx = originalColumns.findIndex(c => emailColRe.test(c));
+    if (emailIdx === -1) {
+        // Fallback: find the column holding the email for the first result
+        const firstEmail = results[0] && results[0].email;
+        if (firstEmail && originalData[firstEmail]) {
+            emailIdx = originalColumns.findIndex(c =>
+                String(originalData[firstEmail][c] || '').toLowerCase().trim() === firstEmail);
+        }
+    }
+    const insertAt = emailIdx === -1 ? originalColumns.length : emailIdx + 1;
+    const headers = [...originalColumns];
+    headers.splice(insertAt, 0, 'Verification_Status');
+    const rows = results.map(r => {
+        const orig = originalData[r.email] || {};
+        const vals = originalColumns.map(c => orig[c] !== undefined ? String(orig[c]) : '');
+        vals.splice(insertAt, 0, r.status || 'unknown');
+        return vals;
+    });
+    return [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(','))].join('\n');
+}
+
 // ── export emails by category ─────────────────────────────────────────────────
 $('export-btn').addEventListener('click', async () => {
     let results;
@@ -282,7 +313,16 @@ $('export-btn').addEventListener('click', async () => {
     else if (exportCategory === 'invalid') results = lastResults.filter(r => r.status !== 'valid');
     else results = lastResults.filter(r => r.status === 'valid');
     if (!results.length) return;
-    // Rich CSV with 14 columns (like the web version)
+
+    // PREFERRED: if we have the original file structure, export it + status column
+    const originalCsv = (exportCategory === 'all') ? buildOriginalWithStatus(results) : null;
+    if (originalCsv) {
+        const r = await window.ts.saveExport('truesendy_verified_with_status.csv', originalCsv);
+        if (!r.canceled) $('file-info').innerHTML = '<span style="color:var(--green)">✓ Saved original file + status for ' + results.length + ' emails → ' + shortPath(r.filePath) + '</span>';
+        return;
+    }
+
+    // Fallback: rich CSV with verification columns
     const headers = ['Email','Status','Safe_To_Send','Category','Provider','Reason','Domain','Is_Disposable','Is_Role_Based','Is_Catch_All'];
     const rows = results.map(r => [
         r.email || '', r.status || 'unknown',

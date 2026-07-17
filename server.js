@@ -1006,18 +1006,43 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     }
 
     // "Original" format — the uploaded file EXACTLY as-is + a single
-    // Verification_Status column (valid/invalid). No other columns added,
-    // no original data removed. Only available when original columns exist.
+    // Verification_Status column (valid/invalid) inserted RIGHT NEXT TO the
+    // email column. No other columns added, no original data removed.
+    // Only available when original columns exist.
     if (format === 'original' && job.originalColumns && job.originalColumns.length) {
         const origCols = job.originalColumns;
         const origLookup = job.originalData || {};
-        const headers = [...origCols, 'Verification_Status'];
+
+        // Find the email column index — the column whose header looks like
+        // "email" / "e-mail" / "email address", or falls back to the column
+        // that contains the verified email value.
+        const emailRegexCol = /[ \t]*e-?mail[ \t]*(address)?$/i;
+        let emailColIdx = origCols.findIndex(c => emailRegexCol.test(c));
+        if (emailColIdx === -1) {
+            // Fallback: find the column holding the email for the first result
+            const firstEmail = results[0] && results[0].email;
+            if (firstEmail) {
+                emailColIdx = origCols.findIndex(c => {
+                    const sample = origLookup[firstEmail];
+                    return sample && String(sample[c] || '').toLowerCase().trim() === firstEmail;
+                });
+            }
+        }
+        // If still not found, default to appending at the end
+        const insertAt = emailColIdx === -1 ? origCols.length : emailColIdx + 1;
+
+        // Build headers with Verification_Status inserted right after the email
+        const headers = [...origCols];
+        headers.splice(insertAt, 0, 'Verification_Status');
+
         const rows = results.map(r => {
             const orig = origLookup[r.email] || {};
             const vals = origCols.map(c => orig[c] !== undefined ? String(orig[c]) : '');
-            vals.push(r.status || 'unknown');
+            // Insert "valid"/"invalid" right after the email column
+            vals.splice(insertAt, 0, r.status || 'unknown');
             return vals;
         });
+
         const fname = `truesendy_verified_${req.params.jobId}.csv`;
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
