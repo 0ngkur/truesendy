@@ -1009,6 +1009,10 @@ async function processJob(jobId) {
                 }
             } catch (err) {
                 console.error(`[TrueSendy] verify error "${email}":`, err.message);
+                // Refund the credit — the verification failed on our end, the user
+                // shouldn't lose a paid credit for an internal error. (Matches the
+                // single-email /api/verify-single behavior at line 677.)
+                try { store.refundToken(job.userId, 1); } catch {}
                 const errData = {
                     email, domain: email.split('@')[1] || 'unknown',
                     providerType: 'Unknown', mxProvider: null, emailCategory: 'Unknown',
@@ -1763,6 +1767,20 @@ app.post('/api/admin/settings/stripe', adminLimiter, adminAuth, (req, res) => {
     );
     pricing.resetStripeCache();
     res.json({ success: true, stripe: settings.getMaskedSettings().stripe });
+});
+
+// Test the Stripe connection — calls stripe.accounts.retrieve() so the admin can
+// verify keys work BEFORE a real transaction. Returns the account ID on success.
+app.get('/api/admin/stripe-test', adminLimiter, adminAuth, async (req, res) => {
+    if (req.admin.role !== 'master') return res.status(403).json({ error: 'Master admin only.' });
+    const stripe = pricing.getStripe();
+    if (!stripe) return res.status(400).json({ error: 'Stripe is not configured. Enter your secret key first.' });
+    try {
+        const account = await stripe.accounts.retrieve();
+        res.json({ ok: true, accountId: account.id, country: account.country, email: account.email || '' });
+    } catch (err) {
+        res.status(400).json({ error: err.message || 'Stripe authentication failed. Check your secret key.' });
+    }
 });
 
 // Update the key product (price / token allowance / validity).

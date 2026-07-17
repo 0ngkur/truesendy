@@ -315,9 +315,6 @@ let dashData = null;   // cached dashboard-stats response
         // Tasks table
         renderTasks(statsRes.jobHistory || []);
 
-        // Keys
-        loadKeys();
-
         // Credits history (full)
         renderCreditsFull(statsRes.usageLog || []);
 
@@ -442,45 +439,6 @@ function renderCreditsFull(log) {
             <td><strong>${h.amount}</strong></td>
             <td style="color:var(--muted);font-size:.78rem">${new Date(h.ts).toLocaleString()}</td>
         </tr>`).join('') + '</tbody></table>';
-}
-
-// ═══════════════════ API KEYS (existing) ═══════════════════
-async function loadKeys() {
-    try {
-        const r = await fetch('/api/keys', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
-        const list = document.getElementById('keys-list');
-        if (!r.keys || r.keys.length === 0) {
-            list.innerHTML = '<div class="empty-state">No active keys. Generate one to use the bot.</div>';
-            return;
-        }
-        list.innerHTML = r.keys.map(k => `
-            <div class="key-row">
-                <span class="key-masked">${k.key}</span>
-                <span style="font-size:.72rem;color:${k.active ? 'var(--green)' : 'var(--red)'}">${k.active ? 'Active' : 'Revoked'}</span>
-            </div>`).join('');
-    } catch {}
-}
-
-async function generateKey() {
-    const errEl = document.getElementById('key-err'); errEl.textContent = '';
-    try {
-        const r = await fetch('/api/keys/generate', {
-            method: 'POST', headers: { Authorization: 'Bearer ' + token }
-        }).then(r => r.json());
-        if (r.error) {
-            errEl.textContent = r.error;
-            if (r.error.includes('Agency')) {
-                errEl.innerHTML += '<br><a href="/key" style="color:var(--blue)">Buy a key →</a> or <button class="btn btn-blue" style="margin-top:.5rem" onclick="showPanel(\'bot\')">Request Agency Access</button>';
-            }
-            return;
-        }
-        document.getElementById('keys-list').innerHTML = `
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1rem;margin-bottom:.75rem">
-                <p style="color:#15803d;font-size:.82rem;font-weight:600;margin-bottom:.5rem">✓ Key generated! Copy it now — shown only once:</p>
-                <p style="font-family:'JetBrains Mono',monospace;font-size:.88rem;word-break:break-all;color:#0f172a">${r.key}</p>
-            </div>`;
-        setTimeout(() => loadKeys(), 6000);
-    } catch { errEl.textContent = 'Could not reach the server.'; }
 }
 
 // ═══════════════════ BOT ACCESS ═══════════════════

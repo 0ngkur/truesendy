@@ -838,7 +838,7 @@
                     <div style="font-weight:700;margin-bottom:0.4rem;">💳 Stripe</div>
                     <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
                         Your Stripe account receives all card payments. Status:
-                        <span id="stripe-status" style="color:var(--text-muted)">loading…</span>
+                        <span id="stripe-status" style="font-weight:700;color:var(--text-muted)">loading…</span>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Stripe Secret Key <span id="stripe-current" style="text-transform:none;color:var(--text-muted);font-weight:400"></span></label>
@@ -849,7 +849,15 @@
                         <input class="form-input" type="password" id="set-stripe-webhook" placeholder="whsec_...  (leave blank to keep current)">
                     </div>
                     <button class="btn btn-blue" onclick="saveStripeKeys()">Save Stripe Keys</button>
-                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.6rem;">All card payments go directly to this Stripe account.</span>
+                    <button class="btn btn-ghost" onclick="testStripeConnection()" style="margin-left:0.5rem">🔌 Test Connection</button>
+                    <span id="stripe-test-result" style="font-size:0.8rem;margin-left:0.6rem;"></span>
+
+                    <!-- Webhook setup hint -->
+                    <div style="margin-top:1rem;padding:0.85rem 1rem;background:var(--bg-subtle);border-radius:8px;font-size:0.78rem;color:var(--text-secondary);line-height:1.6">
+                        <strong style="color:var(--text-heading)">Webhook setup:</strong> In your Stripe Dashboard → Developers → Webhooks → Add endpoint:<br>
+                        <code style="background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--border)">https://truesendy.com/api/stripe-webhook</code><br>
+                        <span style="margin-top:4px;display:block">Subscribe to event: <strong>checkout.session.completed</strong> → copy the signing secret (<code>whsec_...</code>) into the field above.</span>
+                    </div>
                 </div>
 
                 <!-- Key product -->
@@ -1426,6 +1434,27 @@
             statusEl.style.color = st.configured ? 'var(--green)' : 'var(--red)';
             document.getElementById('stripe-current').textContent = st.secretKeyMasked ? `(current: ${st.secretKeyMasked})` : '(not set)';
             toast('✅ Stripe keys updated — card payments live');
+        }
+
+        // Test the Stripe connection by retrieving the account. Verifies the key
+        // works BEFORE a real transaction.
+        async function testStripeConnection() {
+            const result = document.getElementById('stripe-test-result');
+            result.textContent = 'Testing…';
+            result.style.color = 'var(--text-muted)';
+            try {
+                const res = await fetch('/api/admin/stripe-test', { headers: adminHeaders() }).then(r => r.json());
+                if (res.ok) {
+                    result.innerHTML = `✅ Connected — account <strong>${res.accountId}</strong>${res.country ? ' (' + res.country + ')' : ''}`;
+                    result.style.color = 'var(--green)';
+                } else {
+                    result.textContent = '❌ ' + (res.error || 'Connection failed');
+                    result.style.color = 'var(--red)';
+                }
+            } catch (e) {
+                result.textContent = '❌ Could not reach server.';
+                result.style.color = 'var(--red)';
+            }
         }
 
         async function saveKeyProduct() {
