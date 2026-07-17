@@ -535,7 +535,7 @@
             <div class="brand-content">
                 <a href="/" class="brand-logo">
                     <img src="/assets/logo.png" alt="TrueSendy" class="brand-logo-icon" style="height:32px;vertical-align:middle">
-                    True<span class="brand-logo-accent">Sendy</span>
+                   
                 </a>
 
                 <div class="brand-free-badge">
@@ -722,11 +722,16 @@
             switchTab('signup');
         }
 
-        // ── If already logged in, redirect home ──
+        // ── If already logged in, redirect to dashboard (or ?next= page) ──
         if (authToken) {
             fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + authToken } })
                 .then(r => r.json())
-                .then(d => { if (d.user) window.location.href = '/emailcheckup'; })
+                .then(d => {
+                    if (d.user) {
+                        const next = new URLSearchParams(location.search).get('next');
+                        window.location.href = next || '/dashboard';
+                    }
+                })
                 .catch(() => {});
         }
 
@@ -806,8 +811,9 @@
                 return;
             }
 
-            // Success — go to the email verifier
-            window.location.href = '/emailcheckup';
+            // Success — go to the dashboard (or ?next= page if set)
+            const next = new URLSearchParams(location.search).get('next');
+            window.location.href = next || '/dashboard';
         }
 
         // ── SIGN UP ──
@@ -897,7 +903,10 @@
             }
 
             okEl.textContent = '✅ Email verified! Redirecting…';
-            setTimeout(() => window.location.href = '/emailcheckup', 1200);
+            setTimeout(() => {
+                const next = new URLSearchParams(location.search).get('next');
+                window.location.href = next || '/dashboard';
+            }, 1200);
         }
 
         async function doResend() {
