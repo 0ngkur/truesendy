@@ -328,19 +328,17 @@ function markBotDownloaded(userId) {
     saveDB(db);
 }
 
+// Monthly credit allowance per plan. Shared by upgradePlan + approveAgency so
+// the two paths can't drift apart.
+const PLAN_MONTHLY_CREDITS = { free: 50, starter: 1000, pro: 10000, agency: 100000 };
+
 function upgradePlan(userId, plan) {
     const db = loadDB();
     const user = db.users.find(u => u.id === userId);
     if (!user) return false;
 
-    const planCredits = {
-        starter: 1000,
-        pro: 10000,
-        agency: 100000,
-    };
-
     user.plan = plan;
-    user.planCredits = planCredits[plan] || 0;
+    user.planCredits = PLAN_MONTHLY_CREDITS[plan] || 0;
     saveDB(db);
 
     // CR-06: API access requires the Agency plan. Downgrading away from Agency
@@ -374,9 +372,8 @@ function approveAgency(userId) {
     const user = db.users.find(u => u.id === userId);
     if (!user) return { error: 'User not found.' };
 
-    const planCredits = { agency: 100000 };
     user.plan = 'agency';
-    user.planCredits = planCredits.agency;
+    user.planCredits = PLAN_MONTHLY_CREDITS.agency;
     user.agencyRequested = false;
     user.agencyApprovedAt = new Date().toISOString();
     saveDB(db);

@@ -29,3 +29,15 @@ plans/
 .electron-cache/
 desktop/dist/
 truesendy-debug.log
+
+# ── Test/scratch files — never commit (local dev only) ──
+test-api.js
+test-dns.js
+test-smtp.js
+test_e2e.js
+test_upload.js
+test_emails.csv
+test_emails.txt
+test*.js
+test*.csv
+test*.txt

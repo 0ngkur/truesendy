@@ -35,6 +35,7 @@ const DEFAULTS = {
     stats: {
         botDownloads: 0,        // total gated exe downloads (incremented per successful download)
     },
+    jwtSecret: '',              // persisted on first boot if JWT_SECRET env unset (stable restarts)
 };
 
 let _cache = null;
@@ -152,6 +153,23 @@ function incBotDownload() {
     return data.stats.botDownloads;
 }
 
+// ── JWT secret persistence ───────────────────────────────────────────────────
+// If JWT_SECRET env var is set, it wins. Otherwise we generate + persist a
+// random secret to settings.json on first boot so sessions survive restarts
+// (a fresh random secret each boot would log out every user + break download
+// tokens).
+const crypto = require('crypto');
+function getJwtSecret() {
+    if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+    const data = load();
+    if (!data.jwtSecret) {
+        data.jwtSecret = crypto.randomBytes(48).toString('hex');
+        persist();
+        console.log('[TrueSendy] Generated + persisted JWT secret (set JWT_SECRET env var to override).');
+    }
+    return data.jwtSecret;
+}
+
 function getBotDownloads() {
     const data = load();
     return (data.stats && data.stats.botDownloads) || 0;
@@ -168,4 +186,5 @@ module.exports = {
     getMaskedSettings,
     incBotDownload,
     getBotDownloads,
+    getJwtSecret,
 };

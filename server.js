@@ -1012,7 +1012,12 @@ async function processJob(jobId) {
                 // Refund the credit — the verification failed on our end, the user
                 // shouldn't lose a paid credit for an internal error. (Matches the
                 // single-email /api/verify-single behavior at line 677.)
-                try { store.refundToken(job.userId, 1); } catch {}
+                try {
+                    const refunded = store.refundToken(job.userId, 1);
+                    if (!refunded) console.warn(`[TrueSendy] Refund failed for ${email} (user ${job.userId}) — credit may be lost.`);
+                } catch (refundErr) {
+                    console.warn(`[TrueSendy] Refund error for ${email}:`, refundErr.message);
+                }
                 const errData = {
                     email, domain: email.split('@')[1] || 'unknown',
                     providerType: 'Unknown', mxProvider: null, emailCategory: 'Unknown',
@@ -1523,18 +1528,19 @@ app.post('/api/keys/guest-checkout', async (req, res) => {
 // random fallback so the server boots even if JWT_SECRET isn't set as an env var.
 const ADMIN_JWT_SECRET = JWT_SECRET;
 
-// Master admin credentials. Set MASTER_ADMIN_USERNAME / MASTER_ADMIN_PASSWORD
-// as env vars for stable creds. If unset (e.g. fresh Render deploy), default
-// username to 'admin' and generate a strong random password, printed to the
-// logs — copy it from the Render log stream. Keeps admin enabled without a
-// hardcoded (guessable) password.
-// Default admin credentials (used when MASTER_ADMIN_* env vars aren't set) so
-// the panel works out-of-the-box on a fresh Render deploy. Set the env vars to
-// override with secure, custom credentials for production.
-const _adminUser = process.env.MASTER_ADMIN_USERNAME || 'Shakil007';
-const _adminPass = process.env.MASTER_ADMIN_PASSWORD || 'Shakil007Oldisgold100%';
-if (!process.env.MASTER_ADMIN_PASSWORD) {
-    console.warn('[TrueSendy] Using default admin login (Shakil007). For production, set MASTER_ADMIN_USERNAME + MASTER_ADMIN_PASSWORD env vars.');
+// Master admin credentials. In production, MASTER_ADMIN_USERNAME + MASTER_ADMIN_PASSWORD
+// MUST be set via env vars — no hardcoded default ships (would let anyone with source
+// access log in as admin). In development (NODE_ENV !== 'production') a default is
+// allowed for convenience.
+const _isAdminEnvSet = !!(process.env.MASTER_ADMIN_USERNAME && process.env.MASTER_ADMIN_PASSWORD);
+if (!_isAdminEnvSet && process.env.NODE_ENV === 'production') {
+    console.error('[TrueSendy][FATAL] MASTER_ADMIN_USERNAME + MASTER_ADMIN_PASSWORD must be set in production. Aborting.');
+    process.exit(1);
+}
+const _adminUser = process.env.MASTER_ADMIN_USERNAME || 'admin';
+const _adminPass = process.env.MASTER_ADMIN_PASSWORD || 'truesendy-dev-admin';
+if (!_isAdminEnvSet) {
+    console.warn('[TrueSendy] DEV ONLY: using default admin (admin / truesendy-dev-admin). Set MASTER_ADMIN_* env vars for production.');
 }
 const MASTER_ADMIN = { username: _adminUser, password: _adminPass, role: 'master' };
 

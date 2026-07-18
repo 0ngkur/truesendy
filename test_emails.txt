@@ -1,5 +1,0 @@
-This is a test file for our new parser.
-Here is an email: test_one@example.com, and another: test_two@gmail.com.
-Also random junk and another valid email valid.user@domain.co.uk!
-Some dead link http://example.com/dead.
-And a role-based one admin@yahoo.com
