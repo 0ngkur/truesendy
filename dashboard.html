@@ -275,7 +275,8 @@
                         <div class="donut-wrap">
                             <div class="donut" id="donut-chart">
                                 <svg width="150" height="150" viewBox="0 0 150 150">
-                                    <circle cx="75" cy="75" r="60" fill="none" stroke="#f1f5f9" stroke-width="18"/>
+                                    <circle cx="75" cy="75" r="60" fill="none" stroke="#fef3c7" stroke-width="18"/>
+                                    <circle id="donut-invalid" cx="75" cy="75" r="60" fill="none" stroke="#ef4444" stroke-width="18" stroke-linecap="round" stroke-dasharray="0 377" style="transition:stroke-dasharray 1s ease"/>
                                     <circle id="donut-valid" cx="75" cy="75" r="60" fill="none" stroke="#10b981" stroke-width="18" stroke-linecap="round" stroke-dasharray="0 377" style="transition:stroke-dasharray 1s ease"/>
                                 </svg>
                                 <div class="donut-center"><div class="dc-num" id="dc-total">0</div><div class="dc-lbl">Verified</div></div>
@@ -283,6 +284,7 @@
                             <div class="donut-legend">
                                 <div class="leg-item"><span class="leg-dot" style="background:#10b981"></span>Valid <span class="leg-val" id="leg-valid">0</span></div>
                                 <div class="leg-item"><span class="leg-dot" style="background:#ef4444"></span>Invalid <span class="leg-val" id="leg-invalid">0</span></div>
+                                <div class="leg-item"><span class="leg-dot" style="background:#f59e0b"></span>Unknown <span class="leg-val" id="leg-unknown">0</span></div>
                             </div>
                         </div>
                     </div>
@@ -458,18 +460,28 @@ function renderBarChart(usageLog) {
 
 // ═══════════════════ DONUT CHART (valid vs invalid) ═══════════════════
 function renderDonut(jobHistory) {
-    let valid = 0, invalid = 0;
-    (jobHistory || []).forEach(j => { valid += (j.valid || 0); invalid += (j.invalid || 0); });
-    const total = valid + invalid;
+    let valid = 0, invalid = 0, unknown = 0;
+    (jobHistory || []).forEach(j => {
+        valid += (j.valid || 0); invalid += (j.invalid || 0); unknown += (j.unknown || 0);
+    });
+    const total = valid + invalid + unknown;
     document.getElementById('dc-total').textContent = total.toLocaleString();
     document.getElementById('leg-valid').textContent = valid.toLocaleString();
     document.getElementById('leg-invalid').textContent = invalid.toLocaleString();
+    const legUnk = document.getElementById('leg-unknown');
+    if (legUnk) legUnk.textContent = unknown.toLocaleString();
+    // Donut: valid arc (green) + invalid arc (red), unknown is the remaining gray track
     const circ = 2 * Math.PI * 60;  // ~377
-    const validPct = total > 0 ? (valid / total) : 0;
-    const arc = circ * validPct;
+    const validArc = circ * (total > 0 ? valid / total : 0);
+    const invalidArc = circ * (total > 0 ? invalid / total : 0);
     const donutValid = document.getElementById('donut-valid');
-    donutValid.setAttribute('stroke-dasharray', `${arc} ${circ - arc}`);
-    donutValid.setAttribute('stroke', valid >= invalid ? '#10b981' : '#ef4444');
+    const donutInvalid = document.getElementById('donut-invalid');
+    donutValid.setAttribute('stroke-dasharray', `${validArc} ${circ - validArc}`);
+    donutValid.setAttribute('stroke-dashoffset', '0');
+    if (donutInvalid) {
+        donutInvalid.setAttribute('stroke-dasharray', `${invalidArc} ${circ - invalidArc}`);
+        donutInvalid.setAttribute('stroke-dashoffset', `${-validArc}`);
+    }
 }
 
 // ═══════════════════ PANEL SWITCHING ═══════════════════
@@ -509,9 +521,13 @@ async function quickVerify() {
             body: JSON.stringify({ email })
         }).then(r => r.json());
         if (r.error) { res.innerHTML = '<span style="color:var(--red)">' + r.error + '</span>'; return; }
-        res.innerHTML = r.status === 'valid'
-            ? '<span style="color:var(--green);font-weight:600">✅ ' + email + ' is VALID</span>'
-            : '<span style="color:var(--red);font-weight:600">❌ ' + email + ' is INVALID</span>';
+        if (r.status === 'valid') {
+            res.innerHTML = '<span style="color:var(--green);font-weight:600">✅ ' + email + ' is VALID</span>';
+        } else if (r.status === 'unknown') {
+            res.innerHTML = '<span style="color:var(--amber);font-weight:600">❓ ' + email + ' is UNVERIFIABLE</span>';
+        } else {
+            res.innerHTML = '<span style="color:var(--red);font-weight:600">❌ ' + email + ' is INVALID</span>';
+        }
     } catch { res.innerHTML = '<span style="color:var(--red)">Could not reach server.</span>'; }
 }
 
@@ -521,16 +537,16 @@ function renderRecentJobs(jobs) {
     if (!jobs || !jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. <a href="/emailcheckup">Verify your first list →</a></div>'; return; }
     el.innerHTML = jobs.slice(0, 5).map(j => `<div class="card-row">
         <span class="lbl">${esc(j.filename || 'List')} · ${j.total} emails</span>
-        <span class="val"><span style="color:var(--green)">${j.valid}✓</span> <span style="color:var(--red)">${j.invalid}✗</span> <span style="color:var(--muted);font-size:.75rem">${timeAgo(j.date)}</span></span>
+        <span class="val"><span style="color:var(--green)">${j.valid}✓</span> <span style="color:var(--red)">${j.invalid}✗</span> <span style="color:var(--amber)">${j.unknown||0}?</span> <span style="color:var(--muted);font-size:.75rem">${timeAgo(j.date)}</span></span>
     </div>`).join('');
 }
 function renderTasks(jobs) {
     const el = document.getElementById('tasks-list');
     if (!jobs || !jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. Once you verify a list, it appears here with a re-download link.</div>'; return; }
-    el.innerHTML = '<table class="tbl"><thead><tr><th>Date</th><th>File</th><th>Total</th><th>Valid</th><th>Invalid</th><th>Download</th></tr></thead><tbody>' +
+    el.innerHTML = '<table class="tbl"><thead><tr><th>Date</th><th>File</th><th>Total</th><th>Valid</th><th>Invalid</th><th>Unknown</th><th>Download</th></tr></thead><tbody>' +
         jobs.map(j => `<tr>
             <td>${new Date(j.date).toLocaleDateString()}</td><td>${esc(j.filename||'List')}</td><td>${j.total}</td>
-            <td style="color:var(--green);font-weight:600">${j.valid}</td><td style="color:var(--red);font-weight:600">${j.invalid}</td>
+            <td style="color:var(--green);font-weight:600">${j.valid}</td><td style="color:var(--red);font-weight:600">${j.invalid}</td><td style="color:var(--amber);font-weight:600">${j.unknown||0}</td>
             <td><a href="/api/download/${j.id}?format=original&category=all&token=${encodeURIComponent(token)}" class="btn btn-ghost" style="padding:.25rem .6rem;font-size:.75rem" target="_blank">⬇ CSV</a></td>
         </tr>`).join('') + '</tbody></table>';
 }

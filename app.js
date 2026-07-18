@@ -482,8 +482,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 singleEmailResult.textContent = data.error;
                 singleEmailResult.className = 'text-danger';
             } else {
-                const color = data.status === 'valid' ? 'text-success' : 'text-danger';
-                const icon = data.status === 'valid' ? '\u2705' : '\u274C';
+                const color = data.status === 'valid' ? 'text-success' : (data.status === 'unknown' ? 'text-warning' : 'text-danger');
+                const icon = data.status === 'valid' ? '\u2705' : (data.status === 'unknown' ? '\u2753' : '\u274C');
                 const flags = [];
                 if (data.flags.roleBased) flags.push('Role');
                 if (data.flags.catchAll) flags.push('Catch-all');

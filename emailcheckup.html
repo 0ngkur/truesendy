@@ -858,7 +858,7 @@ function selectCategory(cat) {
   downloadCategory = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`.cat-btn[data-cat="${cat}"]`).classList.add('active');
-  const labels = { valid: 'valid emails', invalid: 'invalid emails', all: 'all results' };
+  const labels = { valid: 'valid emails', invalid: 'invalid emails', unknown: 'unknown / unverifiable emails', all: 'all results' };
   document.getElementById('preview-label').textContent = `Preview — ${labels[cat]}`;
 }
 

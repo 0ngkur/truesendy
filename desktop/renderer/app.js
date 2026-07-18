@@ -271,7 +271,7 @@ async function runVerify() {
     $('export-btn').disabled = true;
     resetStats();
     const BATCH = 500;
-    let valid = 0, invalid = 0, skipped = 0;
+    let valid = 0, invalid = 0, unknown = 0, skipped = 0;
     lastResults = [];
     try {
         for (let i = 0; i < currentEmails.length; i += BATCH) {
@@ -284,8 +284,9 @@ async function runVerify() {
             lastResults.push(...r.results);
             valid   += r.valid;
             invalid += r.invalid;
+            unknown += (r.unknown || 0);
             skipped += (r.skipped || 0);
-            renderProgress(i + slice.length, currentEmails.length, valid, invalid, skipped);
+            renderProgress(i + slice.length, currentEmails.length, valid, invalid, skipped, unknown);
         }
         $('export-btn').disabled = (valid + invalid) === 0;
         loadBalance();
@@ -306,7 +307,7 @@ function resetStats() {
     const ea=$('ec-all'); if(ea) ea.textContent='0';
     $('results-table').innerHTML = '<div class="empty">Verifying…</div>';
 }
-function renderProgress(done, total, valid, invalid, skipped) {
+function renderProgress(done, total, valid, invalid, skipped, r_unknown) {
     const pct = Math.round(done / total * 100);
     $('progress').style.width = pct + '%';
     $('progress-pct').textContent = pct + '%';
@@ -316,10 +317,14 @@ function renderProgress(done, total, valid, invalid, skipped) {
     // Update category counts
     const ev = $('ec-valid');   if (ev) ev.textContent = valid;
     const ei = $('ec-invalid'); if (ei) ei.textContent = invalid;
+    const eu = $('ec-unknown'); if (eu) eu.textContent = (r_unknown || 0);
     const ea = $('ec-all');     if (ea) ea.textContent = done;
     // render the latest N results into the table
     const recent = lastResults.slice(-200);
-    const rows = recent.map(r => `<tr class="${r.status === 'valid' ? 'valid' : 'invalid'}"><td>${esc(r.email)}</td><td><span class="pill ${r.status === 'valid' ? 'valid' : 'invalid'}">${r.status}</span></td><td>${esc(r.reason || r.provider || '')}</td></tr>`).join('');
+    const rows = recent.map(r => {
+        const cls = r.status === 'valid' ? 'valid' : (r.status === 'unknown' ? 'unknown' : 'invalid');
+        return `<tr class="${cls}"><td>${esc(r.email)}</td><td><span class="pill ${cls}">${r.status}</span></td><td>${esc(r.reason || r.provider || '')}</td></tr>`;
+    }).join('');
     $('results-table').innerHTML = `<table><thead><tr><th>Email</th><th>Status</th><th>Detail</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function esc(s) { return String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -363,7 +368,8 @@ function buildOriginalWithStatus(results) {
 $('export-btn').addEventListener('click', async () => {
     let results;
     if (exportCategory === 'all') results = lastResults;
-    else if (exportCategory === 'invalid') results = lastResults.filter(r => r.status !== 'valid');
+    else if (exportCategory === 'invalid') results = lastResults.filter(r => r.status === 'invalid');
+    else if (exportCategory === 'unknown') results = lastResults.filter(r => r.status === 'unknown');
     else results = lastResults.filter(r => r.status === 'valid');
     if (!results.length) return;
 

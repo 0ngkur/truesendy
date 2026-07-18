@@ -353,10 +353,10 @@ async function cmdVerifyBulk(filePath, apiKey, outPath, outInvalidPath) {
 
     process.stdout.write(`\r  ${c('green','✓')} Done!  (${done}/${emails.length})                               \n\n`);
 
-    // ── Stats ────────────────────────────────────────────────────────────────
+    // ── Stats (3-category: valid / invalid / unknown) ────────────────────────
     const valid   = allResults.filter(r => r.status === 'valid');
-    const invalid = allResults.filter(r => r.status !== 'valid');
-    const risky   = allResults.filter(r => r.status === 'risky');
+    const invalid = allResults.filter(r => r.status === 'invalid');
+    const unknown = allResults.filter(r => r.status === 'unknown');
     const pct     = ((valid.length / allResults.length) * 100).toFixed(1);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const tokLeft = allResults[allResults.length-1]?.tokensRemaining ?? '?';
@@ -366,7 +366,7 @@ async function cmdVerifyBulk(filePath, apiKey, outPath, outInvalidPath) {
     console.log('  Total checked  : ' + c('white', allResults.length.toLocaleString()));
     console.log('  ✓ Valid        : ' + c('green', valid.length.toLocaleString() + '  (' + pct + '%)'));
     console.log('  ✗ Invalid      : ' + c('red',   invalid.length.toLocaleString()));
-    console.log('  ⚠ Risky        : ' + c('yellow', risky.length.toLocaleString()));
+    console.log('  ? Unknown      : ' + c('yellow', unknown.length.toLocaleString()));
     console.log('  ⏱ Time         : ' + c('dim', elapsed + 's'));
     console.log('  Tokens left    : ' + (tokLeft === 0
         ? c('red','0  ← Buy a new key at truesendy.com/key')
@@ -387,7 +387,8 @@ function saveResults(allResults, filePath, outPath, outInvalidPath) {
     const stamp   = Date.now();
 
     const valid   = allResults.filter(r => r.status === 'valid');
-    const invalid = allResults.filter(r => r.status !== 'valid');
+    const invalid = allResults.filter(r => r.status === 'invalid');
+    const unknown = allResults.filter(r => r.status === 'unknown');
 
     // ── VALID-ONLY clean list (primary output) ───────────────────────────────
     const validFile = outPath || (base + '_VALID_' + stamp + '.csv');
@@ -401,7 +402,7 @@ function saveResults(allResults, filePath, outPath, outInvalidPath) {
     console.log(c('green','  ✓ VALID emails saved  : ') + c('bold', validFile));
     console.log(c('dim',  '    ' + valid.length.toLocaleString() + ' emails — ready to send ✈️'));
 
-    // ── INVALID list (optional but useful) ───────────────────────────────────
+    // ── INVALID list (confirmed non-existent) ────────────────────────────────
     const invalidFile = outInvalidPath || (base + '_INVALID_' + stamp + '.csv');
     const invalidLines = [
         'Email,Status,Reason',
@@ -411,7 +412,21 @@ function saveResults(allResults, filePath, outPath, outInvalidPath) {
     ];
     fs.writeFileSync(invalidFile, invalidLines.join('\n'), 'utf8');
     console.log(c('red','  ✗ INVALID emails saved : ') + c('dim', invalidFile));
-    console.log(c('dim','    ' + invalid.length.toLocaleString() + ' emails removed from your list'));
+    console.log(c('dim','    ' + invalid.length.toLocaleString() + ' confirmed non-existent'));
+
+    // ── UNKNOWN list (unverifiable — couldn't confirm either way) ─────────────
+    if (unknown.length) {
+        const unknownFile = base + '_UNKNOWN_' + stamp + '.csv';
+        const unknownLines = [
+            'Email,Status,Reason',
+            ...unknown.map(r =>
+                `"${r.email}","${r.status}","${r.reason||''}"`
+            )
+        ];
+        fs.writeFileSync(unknownFile, unknownLines.join('\n'), 'utf8');
+        console.log(c('yellow','  ? UNKNOWN emails saved : ') + c('dim', unknownFile));
+        console.log(c('dim','    ' + unknown.length.toLocaleString() + ' unverifiable — review manually'));
+    }
     console.log('');
 }
 

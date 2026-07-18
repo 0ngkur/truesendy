@@ -1057,6 +1057,7 @@ async function processJob(jobId) {
                     total: job.processed,
                     valid: job.valid,
                     invalid: job.invalid,
+                    unknown: job.unknown || 0,
                     filename: job.filename || '',
                     status: job.status,
                 });
@@ -1204,7 +1205,10 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
         return [...origVals, ...verifVals];
     });
 
-    const sheetName = category === 'all' ? 'All Results' : category === 'valid' ? 'Valid Emails' : 'Invalid Emails';
+    const sheetName = category === 'all' ? 'All Results'
+        : category === 'valid' ? 'Valid Emails'
+        : category === 'unknown' ? 'Unknown Emails'
+        : 'Invalid Emails';
 
     if (format === 'excel') {
         const ws = xlsx.utils.aoa_to_sheet([headers, ...rows]);

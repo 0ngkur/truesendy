@@ -227,7 +227,7 @@ async function buyCredits() {
             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
             body: JSON.stringify({ tokens })
         }).then(r => r.json());
-        if (r.error) { errBox.textContent = r.error; errBox.classList.add('show'); btn.disabled = false; btn.innerHTML = 'Buy <span id="btn-tokens">' + tokens.toLocaleString() + '</span> Credits — $<span id="btn-price">' + (tokens * 0.0020).toFixed(2) + '</span>'; updateDisplay(); return; }
+        if (r.error) { errBox.textContent = r.error; errBox.classList.add('show'); btn.disabled = false; updateDisplay(); return; }
         if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return; }
         if (r.devMode) {
             const ok = document.getElementById('banner-ok');

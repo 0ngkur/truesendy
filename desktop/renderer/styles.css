@@ -84,10 +84,12 @@ input:focus{border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(59,130,246,.1
 .results-table td{padding:.5rem .75rem;border-bottom:1px solid var(--border);word-break:break-all}
 .results-table tr.valid td{color:var(--green)}
 .results-table tr.invalid td{color:var(--text-2)}
+.results-table tr.unknown td{color:var(--amber)}
 .results-table .empty{padding:2rem;text-align:center;color:var(--muted)}
 .pill{display:inline-block;padding:.1rem .5rem;border-radius:999px;font-size:.7rem;font-weight:700}
 .pill.valid{background:#dcfce7;color:#15803d}
 .pill.invalid{background:#fee2e2;color:#b91c1c}
+.pill.unknown{background:#fef3c7;color:#92400e}
 
 /* ── SETTINGS MODAL ── */
 .modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:100}

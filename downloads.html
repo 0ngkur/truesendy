@@ -626,14 +626,14 @@
         function tryDownload(e) {
             e.preventDefault();
             if (dlCanDownload && dlToken) {
-                    window.location.href = '/downloads/TrueSendy-Setup.exe?token=' + encodeURIComponent(dlToken);
-                } else if (dlToken) {
-                    // smooth-scroll to the request button
-                    document.getElementById('req-agency-btn') || document.getElementById('dl-zone');
-                    document.getElementById('dl-zone').scrollIntoView({behavior:'smooth'});
-                } else {
-                    window.location.href = '/signin?next=/downloads';
-                }
+                window.location.href = '/downloads/TrueSendy-Setup.exe?token=' + encodeURIComponent(dlToken);
+            } else if (dlToken) {
+                // Logged in but not agency — smooth-scroll to the request/upgrade area
+                const zone = document.getElementById('dl-zone');
+                if (zone) zone.scrollIntoView({behavior:'smooth'});
+            } else {
+                window.location.href = '/signin?next=/downloads';
+            }
             return false;
         }
 

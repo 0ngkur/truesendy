@@ -256,6 +256,7 @@ function recordJobSummary(userId, summary) {
         total: summary.total || 0,
         valid: summary.valid || 0,
         invalid: summary.invalid || 0,
+        unknown: summary.unknown || 0,
         filename: summary.filename || '',
         status: summary.status || 'complete',
     });
