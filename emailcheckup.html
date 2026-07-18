@@ -464,6 +464,9 @@ nav{
         <button class="cat-btn" data-cat="invalid" onclick="selectCategory('invalid')">
           ❌ Invalid Only (<span id="cat-invalid">0</span>)
         </button>
+        <button class="cat-btn" data-cat="unknown" onclick="selectCategory('unknown')">
+          ❓ Unknown / Unverifiable (<span id="cat-unknown">0</span>)
+        </button>
         <button class="cat-btn" data-cat="all" onclick="selectCategory('all')">
           📋 All Results (<span id="cat-all">0</span>)
         </button>
@@ -784,19 +787,20 @@ function pollJob() {
         clearInterval(pollTimer);
         finalJobId = currentJobId;
         setProgress(d.processed, d.valid, d.invalid, d.total);
-        if (d.valid > 0) {
-          showResults(d.valid, d.processed);
-        } else {
-          toast('No valid emails found in this list. Download invalid only.', 'error');
-          document.getElementById('progress-section').classList.remove('show');
-          // Still show results so users can download invalid
-          showResults(0, d.processed);
+        // Always show results — valid, invalid, and unknown are all downloadable
+        showResults(d.valid || 0, d.processed);
+        if ((d.valid || 0) === 0 && (d.unknown || 0) === 0) {
+          toast('No valid emails found — all invalid. Download below.', 'error');
+        } else if ((d.valid || 0) === 0) {
+          toast('No confirmed-valid emails, but some are unverifiable (unknown).', 'error');
         }
         // Update category counts
         const invalidCount = (d.invalid || 0);
+        const unknownCount = (d.unknown || 0);
         const allCount = d.processed || 0;
         const vc = document.getElementById('cat-valid');  if (vc) vc.textContent = d.valid || 0;
         const ic = document.getElementById('cat-invalid'); if (ic) ic.textContent = invalidCount;
+        const uc = document.getElementById('cat-unknown'); if (uc) uc.textContent = unknownCount;
         const ac = document.getElementById('cat-all');     if (ac) ac.textContent = allCount;
         checkCredits(); // Refresh credit display
       }

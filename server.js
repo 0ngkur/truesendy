@@ -726,7 +726,8 @@ app.post('/api/verify-bulk', authMiddleware, async (req, res) => {
     res.json({
         total: results.length,
         valid: results.filter(r => r.status === 'valid').length,
-        invalid: results.filter(r => r.status !== 'valid').length,
+        invalid: results.filter(r => r.status === 'invalid').length,
+        unknown: results.filter(r => r.status === 'unknown').length,
         skipped,
         results,
         tokensRemaining: store.getUserCredits(req.user.id),
@@ -763,7 +764,7 @@ function createVerificationJob(userId, validEmails, filename, originalColumns, o
     const jobId = crypto.randomUUID();
     activeJobs[jobId] = {
         userId, emails: validEmails,
-        processed: 0, valid: 0, invalid: 0,
+        processed: 0, valid: 0, invalid: 0, unknown: 0,
         results: [], recentValid: [], recentInvalid: [],
         status: 'running', createdAt: Date.now(),
         filename: filename || '',
@@ -953,6 +954,7 @@ app.get('/api/progress/:jobId', authMiddleware, (req, res) => {
         total: job.emails.length,
         valid: job.valid,
         invalid: job.invalid,
+        unknown: job.unknown || 0,
         status: job.status,
         recentValid: job.recentValid,
         recentInvalid: job.recentInvalid,
@@ -1002,6 +1004,10 @@ async function processJob(jobId) {
                     job.valid++;
                     job.recentValid.unshift(email);
                     if (job.recentValid.length > 5) job.recentValid.pop();
+                } else if (data.status === 'unknown') {
+                    job.unknown = (job.unknown || 0) + 1;
+                    job.recentInvalid.unshift({ email, reason: data.reasonCode });
+                    if (job.recentInvalid.length > 5) job.recentInvalid.pop();
                 } else {
                     job.invalid++;
                     job.recentInvalid.unshift({ email, reason: data.reasonCode });
@@ -1077,12 +1083,14 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     // Read results from disk (handles 100k+ without memory blowup)
     const allResults = readJobResults(job);
 
-    // Filter results by category
+    // Filter results by category (valid / invalid / unknown / all)
     let results;
     if (category === 'all') {
         results = allResults;
     } else if (category === 'invalid') {
-        results = allResults.filter(r => r.status !== 'valid');
+        results = allResults.filter(r => r.status === 'invalid');
+    } else if (category === 'unknown') {
+        results = allResults.filter(r => r.status === 'unknown');
     } else {
         results = allResults.filter(r => r.status === 'valid');
     }
@@ -1334,7 +1342,8 @@ app.post('/api/v1/verify-bulk', apiLimiter, apiKeyAuth, async (req, res) => {
     res.json({
         total: results.length,
         valid: results.filter(r => r.status === 'valid').length,
-        invalid: results.filter(r => r.status !== 'valid').length,
+        invalid: results.filter(r => r.status === 'invalid').length,
+        unknown: results.filter(r => r.status === 'unknown').length,
         skipped,
         results,
         tokensRemaining: store.getUserCredits(req.apiRecord.userId),
