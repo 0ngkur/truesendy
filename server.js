@@ -716,18 +716,27 @@ app.post('/api/verify-bulk', authMiddleware, async (req, res) => {
         const batchResults = await Promise.all(batch.map(async email => {
             try {
                 const r = await verifier.verifyEmail(email);
-                return { email, status: r.status, reason: r.reasonCode, provider: r.mxProvider || r.providerType, flags: r.flags || {} };
+                return {
+                    email,
+                    status:       r.status,
+                    safe_to_send: r.safeToSend !== undefined ? r.safeToSend : (r.status === 'safe' || r.status === 'valid'),
+                    overall_score: r.overallScore,
+                    reason:       r.reasonCode,
+                    provider:     r.mxProvider || r.providerType,
+                    flags:        r.flags || {},
+                };
             } catch {
-                return { email, status: 'error', reason: 'verification_failed' };
+                return { email, status: 'error', safe_to_send: false, reason: 'verification_failed' };
             }
         }));
         results.push(...batchResults);
     }
     res.json({
-        total: results.length,
-        valid: results.filter(r => r.status === 'valid').length,
-        invalid: results.filter(r => r.status === 'invalid').length,
-        unknown: results.filter(r => r.status === 'unknown').length,
+        total:           results.length,
+        valid:           results.filter(r => r.status === 'safe' || r.status === 'valid').length,
+        invalid:         results.filter(r => r.status === 'invalid').length,
+        unknown:         results.filter(r => r.status === 'unknown' || r.status === 'catch_all').length,
+        catch_all:       results.filter(r => r.status === 'catch_all').length,
         skipped,
         results,
         tokensRemaining: store.getUserCredits(req.user.id),
@@ -1000,11 +1009,13 @@ async function processJob(jobId) {
                 // Write to disk (handles 100k+ without memory blowup) + keep a
                 // small rolling buffer for the live feed.
                 appendResult(job, data);
-                if (data.status === 'valid') {
+                // 'safe' and 'valid' (role) are both deliverable → count as valid
+                // 'catch_all' is uncertain → count alongside unknown
+                if (data.status === 'safe' || data.status === 'valid') {
                     job.valid++;
                     job.recentValid.unshift(email);
                     if (job.recentValid.length > 5) job.recentValid.pop();
-                } else if (data.status === 'unknown') {
+                } else if (data.status === 'unknown' || data.status === 'catch_all') {
                     job.unknown = (job.unknown || 0) + 1;
                     job.recentInvalid.unshift({ email, reason: data.reasonCode });
                     if (job.recentInvalid.length > 5) job.recentInvalid.pop();
@@ -1084,7 +1095,8 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     // Read results from disk (handles 100k+ without memory blowup)
     const allResults = readJobResults(job);
 
-    // Filter results by category (valid / invalid / unknown / all)
+    // Filter results by category (valid / invalid / unknown / all / catch_all)
+    // New status system: safe | valid (role) | catch_all | invalid | unknown
     let results;
     if (category === 'all') {
         results = allResults;
@@ -1092,8 +1104,11 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
         results = allResults.filter(r => r.status === 'invalid');
     } else if (category === 'unknown') {
         results = allResults.filter(r => r.status === 'unknown');
+    } else if (category === 'catch_all') {
+        results = allResults.filter(r => r.status === 'catch_all');
     } else {
-        results = allResults.filter(r => r.status === 'valid');
+        // 'valid' download = "safe" (confirmed deliverable) + "valid" (role accounts, also deliverable)
+        results = allResults.filter(r => r.status === 'safe' || r.status === 'valid');
     }
 
     // "Original" format — the uploaded file EXACTLY as-is + a single
@@ -1157,11 +1172,29 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     // Avoid duplicate "Email" column: if the original file already has an email
     // column (case-insensitive), drop it from the verification headers.
     const origHasEmail = origCols.some(c => /^e-?mail$/i.test(c));
+
+    // Helper: derive safe_to_send from the new classifier field or fall back to status
+    const isSafe = (r) => {
+        // New classifier sets r.safeToSend explicitly
+        if (r.safeToSend !== undefined) return r.safeToSend;
+        // Fallback for any legacy results still in memory
+        return r.status === 'safe' || r.status === 'valid';
+    };
+
+    // Helper: was SMTP connection possible?
+    const canSmtp = (r) => {
+        if (r.reasonCode === 'mx_exists_smtp_blocked') return 'false';
+        if (r.status === 'safe' || r.status === 'valid') return 'true';
+        if (r.reasonCode === 'smtp_accepted' || r.reasonCode === 'mailbox_full') return 'true';
+        if (r.status === 'invalid' && r.reasonCode !== 'no_mx_record') return 'true';
+        return 'false';
+    };
+
     const verifHeaders = origHasEmail
-        ? ['Status', 'Safe_To_Send', 'Category', 'Provider', 'Reason', 'Domain',
+        ? ['Status', 'Safe_To_Send', 'Overall_Score', 'Category', 'Provider', 'Reason', 'Domain',
            'Is_Disposable', 'Is_Role_Based', 'Is_Catch_All', 'Is_Free_Email',
            'Syntax_Valid', 'MX_Accepts_Mail', 'Can_Connect_SMTP']
-        : ['Email', 'Status', 'Safe_To_Send', 'Category', 'Provider', 'Reason',
+        : ['Email', 'Status', 'Safe_To_Send', 'Overall_Score', 'Category', 'Provider', 'Reason',
            'Domain', 'Is_Disposable', 'Is_Role_Based', 'Is_Catch_All',
            'Is_Free_Email', 'Syntax_Valid', 'MX_Accepts_Mail', 'Can_Connect_SMTP'];
 
@@ -1170,37 +1203,45 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
     const rows = results.map(r => {
         const orig = origLookup[r.email] || {};
         const origVals = origCols.map(c => orig[c] !== undefined ? String(orig[c]) : '');
+        const safeVal = isSafe(r) ? 'true' : 'false';
+        const scoreVal = r.overallScore !== undefined ? String(r.overallScore) : (r.status === 'safe' ? '98' : r.status === 'valid' ? '85' : r.status === 'catch_all' ? '60' : r.status === 'invalid' ? '0' : '30');
+        const freeEmail = r.flags?.freeEmail ? 'true' : 'false';
+        const mxAccepts = (r.status !== 'invalid' || r.reasonCode !== 'no_mx_record') ? 'true' : 'false';
+        const canSmtpVal = canSmtp(r);
+
         const verifVals = origHasEmail
             ? [
                 r.status || 'unknown',
-                r.status === 'valid' ? 'true' : 'false',
-                r.emailCategory || 'unknown',
-                r.mxProvider || r.providerType || 'unknown',
+                safeVal,
+                scoreVal,
+                r.emailCategory || 'Professional',
+                r.mxProvider || r.providerType || 'Custom/Business',
                 r.reasonCode || '',
                 r.domain || '',
                 r.flags?.disposable ? 'true' : 'false',
                 r.flags?.roleBased ? 'true' : 'false',
                 r.flags?.catchAll ? 'true' : 'false',
-                r.emailCategory === 'Free' ? 'true' : 'false',
+                freeEmail,
                 'true',
-                'true',
-                r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
+                mxAccepts,
+                canSmtpVal,
             ]
             : [
                 r.email || '',
                 r.status || 'unknown',
-                r.status === 'valid' ? 'true' : 'false',
-                r.emailCategory || 'unknown',
-                r.mxProvider || r.providerType || 'unknown',
+                safeVal,
+                scoreVal,
+                r.emailCategory || 'Professional',
+                r.mxProvider || r.providerType || 'Custom/Business',
                 r.reasonCode || '',
                 r.domain || '',
                 r.flags?.disposable ? 'true' : 'false',
                 r.flags?.roleBased ? 'true' : 'false',
                 r.flags?.catchAll ? 'true' : 'false',
-                r.emailCategory === 'Free' ? 'true' : 'false',
+                freeEmail,
                 'true',
-                'true',
-                r.status === 'valid' || r.status === 'invalid' ? 'true' : 'false'
+                mxAccepts,
+                canSmtpVal,
             ];
         return [...origVals, ...verifVals];
     });
@@ -1271,12 +1312,14 @@ app.post('/api/v1/verify', apiLimiter, apiKeyAuth, async (req, res) => {
         const result = await verifier.verifyEmail(email);
         store.stampApiUse(req.apiRecord.userId);
         res.json({
-            email: result.email,
-            status: result.status,
-            reason: result.reasonCode,
-            provider: result.mxProvider || result.providerType,
-            category: result.emailCategory || 'unknown',
-            flags: result.flags || {},
+            email:           result.email,
+            status:          result.status,
+            safe_to_send:    result.safeToSend !== undefined ? result.safeToSend : (result.status === 'safe' || result.status === 'valid'),
+            overall_score:   result.overallScore !== undefined ? result.overallScore : undefined,
+            reason:          result.reasonCode,
+            provider:        result.mxProvider || result.providerType,
+            category:        result.emailCategory || 'Professional',
+            flags:           result.flags || {},
             tokensRemaining: store.getUserCredits(req.apiRecord.userId),
         });
     } catch (e) {
@@ -1328,14 +1371,16 @@ app.post('/api/v1/verify-bulk', apiLimiter, apiKeyAuth, async (req, res) => {
                 try {
                     const r = await verifier.verifyEmail(email);
                     return {
-                        email: r.email,
-                        status: r.status,
-                        reason: r.reasonCode,
-                        provider: r.mxProvider || r.providerType,
-                        flags: r.flags || {},
+                        email:        r.email,
+                        status:       r.status,
+                        safe_to_send: r.safeToSend !== undefined ? r.safeToSend : (r.status === 'safe' || r.status === 'valid'),
+                        overall_score: r.overallScore,
+                        reason:       r.reasonCode,
+                        provider:     r.mxProvider || r.providerType,
+                        flags:        r.flags || {},
                     };
                 } catch {
-                    return { email, status: 'error', reason: 'verification_failed' };
+                    return { email, status: 'error', safe_to_send: false, reason: 'verification_failed' };
                 }
             })
         );
@@ -1344,10 +1389,11 @@ app.post('/api/v1/verify-bulk', apiLimiter, apiKeyAuth, async (req, res) => {
 
     store.stampApiUse(req.apiRecord.userId);
     res.json({
-        total: results.length,
-        valid: results.filter(r => r.status === 'valid').length,
-        invalid: results.filter(r => r.status === 'invalid').length,
-        unknown: results.filter(r => r.status === 'unknown').length,
+        total:           results.length,
+        valid:           results.filter(r => r.status === 'safe' || r.status === 'valid').length,
+        invalid:         results.filter(r => r.status === 'invalid').length,
+        unknown:         results.filter(r => r.status === 'unknown' || r.status === 'catch_all').length,
+        catch_all:       results.filter(r => r.status === 'catch_all').length,
         skipped,
         results,
         tokensRemaining: store.getUserCredits(req.apiRecord.userId),
