@@ -1204,7 +1204,7 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
         const orig = origLookup[r.email] || {};
         const origVals = origCols.map(c => orig[c] !== undefined ? String(orig[c]) : '');
         const safeVal = isSafe(r) ? 'true' : 'false';
-        const scoreVal = r.overallScore !== undefined ? String(r.overallScore) : (r.status === 'safe' ? '98' : r.status === 'valid' ? '85' : r.status === 'catch_all' ? '60' : r.status === 'invalid' ? '0' : '30');
+        const scoreVal = r.overallScore !== undefined ? String(r.overallScore) : (r.status === 'safe' ? '98' : r.status === 'valid' ? '85' : r.status === 'catch_all' ? '75' : r.status === 'invalid' ? '3' : '30');
         const freeEmail = r.flags?.freeEmail ? 'true' : 'false';
         const mxAccepts = (r.status !== 'invalid' || r.reasonCode !== 'no_mx_record') ? 'true' : 'false';
         const canSmtpVal = canSmtp(r);

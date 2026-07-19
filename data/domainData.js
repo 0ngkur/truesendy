@@ -84,6 +84,7 @@ const MX_PROVIDER_PATTERNS = [
   { pattern: /gmail-smtp-in\.l\.google\.com$/i, provider: 'Google Workspace' },
   { pattern: /aspmx\.l\.google\.com$/i,    provider: 'Google Workspace' },
   { pattern: /smtp\.google\.com$/i,        provider: 'Google Workspace' },
+  { pattern: /alt\d?\.aspmx\.l\.google\.com$/i, provider: 'Google Workspace' },
   { pattern: /outlook\.com$/i,             provider: 'Microsoft 365' },
   { pattern: /microsoft\.com$/i,           provider: 'Microsoft 365' },
   { pattern: /protection\.outlook\.com$/i, provider: 'Microsoft 365' },
@@ -94,8 +95,8 @@ const MX_PROVIDER_PATTERNS = [
   { pattern: /mimecast\.org$/i,            provider: 'Mimecast' },
   { pattern: /barracuda\.com$/i,           provider: 'Barracuda' },
   { pattern: /barracudanetworks\.com$/i,   provider: 'Barracuda' },
-  { pattern: /messagelabs\.com$/i,         provider: 'Symantec' },
-  { pattern: /symanteccloud\.com$/i,       provider: 'Symantec' },
+  { pattern: /messagelabs\.com$/i,         provider: 'MessageLabs' },
+  { pattern: /symanteccloud\.com$/i,       provider: 'MessageLabs' },
   { pattern: /yahoodns\.net$/i,            provider: 'Yahoo' },
   { pattern: /am0\.yahoodns\.net$/i,       provider: 'Yahoo' },
   { pattern: /zoho\.com$/i,               provider: 'Zoho' },
@@ -120,6 +121,7 @@ const MX_PROVIDER_PATTERNS = [
   { pattern: /mailspamprotection\.com$/i,  provider: 'MailSpamProtection' },
   { pattern: /proofpoint\.com$/i,          provider: 'Proofpoint' },
   { pattern: /spamexperts\.com$/i,         provider: 'SpamExperts' },
+  { pattern: /messagingengine\.com$/i,     provider: 'FastMail' },  // FastMail (newyorkjets.com etc)
   { pattern: /123-reg\.co\.uk$/i,          provider: 'Custom/Business' },
   { pattern: /aiso\.net$/i,               provider: 'Custom/Business' },
   { pattern: /weidner\.com$/i,             provider: 'Proofpoint' },
@@ -127,6 +129,8 @@ const MX_PROVIDER_PATTERNS = [
   { pattern: /anterra\.com$/i,             provider: 'Mimecast' },
   { pattern: /cortland\.com$/i,            provider: 'Mimecast' },
   { pattern: /cortlandpartners\.com$/i,    provider: 'Mimecast' },
+  { pattern: /ess\.barracudanetworks\.com$/i, provider: 'Barracuda' },
+  { pattern: /spamfilter\.us$/i,           provider: 'Custom/Business' },
 ];
 
 // --- Providers known to aggressively block SMTP probes (RCPT TO) ---
@@ -144,6 +148,15 @@ const ANTI_PROBE_PROVIDERS = new Set([
   'Amazon SES',
   'SpamExperts',
   'MailSpamProtection',
+  'FastMail',         // FastMail blocks external probes
+  'MessageLabs',      // Broadcom/Symantec cloud gateway
+]);
+
+// --- Providers KNOWN to be catch-all (accept every RCPT TO) ---
+// Confirmed from real-world data: these MX infrastructures always accept all addresses.
+// Using domain-level heuristics here avoids needing an SMTP probe at all.
+const KNOWN_CATCHALL_MX_PROVIDERS = new Set([
+  'FastMail',     // in1-smtp.messagingengine.com / in2-smtp.messagingengine.com — always catch-all
 ]);
 
 // --- Well-known large legitimate email providers (for scoring) ---
@@ -239,6 +252,14 @@ function isAntiProbeProvider(mxProvider) {
 }
 
 /**
+ * Is this MX provider known to accept ALL recipient addresses (catch-all)?
+ * If true, we don't need an SMTP probe — we know it's catch-all.
+ */
+function isKnownCatchAllProvider(mxProvider) {
+  return KNOWN_CATCHALL_MX_PROVIDERS.has(mxProvider);
+}
+
+/**
  * Is this a well-known big email provider domain?
  * Used as a secondary signal when MX provider can't be identified.
  */
@@ -258,10 +279,12 @@ module.exports = {
   classifyProvider,
   identifyMxProvider,
   isAntiProbeProvider,
+  isKnownCatchAllProvider,
   isKnownBigProvider,
   isDisposable,
   isRoleAccount,
   FREE_PROVIDERS,
   MX_PROVIDER_PATTERNS,
   ANTI_PROBE_PROVIDERS,
+  KNOWN_CATCHALL_MX_PROVIDERS,
 };
