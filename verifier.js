@@ -125,13 +125,21 @@ async function _checkMicrosoftMailboxOnce(email) {
         const ifExists  = data.IfExistsResult;
         const throttled = data.ThrottleStatus === 1;
 
-        // Check definitive IfExistsResult FIRST — throttle is just "slow down"
+        // ── CRITICAL: When throttled, IfExistsResult=0 is UNRELIABLE ──
+        // Microsoft returns IfExistsResult=0 as a DEFAULT when throttled,
+        // NOT from a real directory lookup. Only trust NEGATIVE results
+        // (not_found=1, federated=6) when throttled — the server wouldn't
+        // return these as defaults.
+        if (throttled) {
+            if (ifExists === 1) return { result: 'not_found' };  // reliable even when throttled
+            if (ifExists === 6) return { result: 'federated' };  // reliable (specific)
+            return { result: 'throttled' };  // IfExistsResult=0/5 unreliable
+        }
+
+        // Not throttled — all results are reliable
         if (ifExists === 0 || ifExists === 5) return { result: 'exists' };
         if (ifExists === 1) return { result: 'not_found' };
         if (ifExists === 6) return { result: 'federated' };
-
-        // Only treat as throttled if IfExistsResult was ambiguous
-        if (throttled) return { result: 'throttled' };
 
         return { result: 'unknown', ifExists };
     } catch (e) {
@@ -355,9 +363,20 @@ async function verifyEmail(rawEmail) {
     // An SMTP 250 from these providers is meaningless — classify as unknown.
     if (SMTP_UNRELIABLE_PROVIDERS.has(mxProvider)) {
         if (smtpResult && smtpResult.result === 'accepted') {
+            if (isCatchAll) {
+                // Catch-all detected → classify as catch_all (Reon does this too)
+                return buildResult({
+                    email, localPart, domain,
+                    smtpOutcome: smtpResult,
+                    isCatchAllDomain: true,
+                    hadMx: true,
+                    mxHosts,
+                });
+            }
+            // Not catch-all but accepted → unknown (can't trust single acceptance)
             return buildResult({
                 email, localPart, domain,
-                smtpOutcome: { result: 'temp_fail' },  // treat acceptance as temp_fail → unknown
+                smtpOutcome: { result: 'temp_fail' },
                 isCatchAllDomain: false,
                 hadMx: true,
                 mxHosts,
