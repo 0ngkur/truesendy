@@ -991,10 +991,11 @@ async function processJob(jobId) {
     if (!job) return;
 
     // ── Concurrency: 40 workers (was 20).
-    // The SMTP global cap (50) in verifier.js throttles actual socket use,
-    // so 40 workers keeps the pipe full without exceeding OS socket limits.
-    // DNS cache means most workers skip the DNS round-trip entirely.
-    const CONCURRENCY = 40;
+    // ── Concurrency: 20 workers.
+    // Must match actual processing capacity: 15 SMTP slots + 5 M365 API slots = 20.
+    // Higher values cause thundering-herd: mail servers see burst connections
+    // from the same IP → greylisting/temp-blocks → mass "unknown" results.
+    const CONCURRENCY = 20;
     let index = 0;
 
     // ── [FIX #5] Global 30-minute job timeout — kills runaway jobs
