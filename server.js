@@ -990,7 +990,6 @@ async function processJob(jobId) {
     const job = activeJobs[jobId];
     if (!job) return;
 
-    // ── Concurrency: 40 workers (was 20).
     // ── Concurrency: 20 workers.
     // Must match actual processing capacity: 15 SMTP slots + 5 M365 API slots = 20.
     // Higher values cause thundering-herd: mail servers see burst connections
