@@ -20,7 +20,7 @@ try {
 }
 
 // ── Global SMTP concurrency cap ──────────────────────────────────────────────
-const SMTP_MAX_CONCURRENCY = 50;
+const SMTP_MAX_CONCURRENCY = 15;
 let _smtpActive = 0;
 const _smtpQueue = [];
 const SMTP_MAX_QUEUE = 200;
