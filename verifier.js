@@ -39,9 +39,7 @@ function _smtpRelease() {
 const MSFT_API_URL = 'https://login.microsoftonline.com/common/GetCredentialType';
 
 // ── Rate limiter: max 3 requests/second (token bucket) ──────────────────────
-// Microsoft throttles based on requests-per-second, not concurrent connections.
-// A token bucket smooths out burst requests that cause throttling.
-const MSFT_RATE_LIMIT = 3;        // max requests per second
+const MSFT_RATE_LIMIT = 3;
 let _msftTokens = MSFT_RATE_LIMIT;
 let _msftLastRefill = Date.now();
 const _msftRateQueue = [];
@@ -67,7 +65,7 @@ function _msftRateAcquire() {
     });
 }
 
-// Drain the rate queue every 333ms (1000/3 = one token every 333ms)
+// Drain the rate queue every 333ms
 setInterval(() => {
     _refillTokens();
     while (_msftRateQueue.length > 0 && _msftTokens > 0) {
@@ -76,11 +74,15 @@ setInterval(() => {
     }
 }, 333).unref();
 
-// Per-domain cache for catch-all status detected via Microsoft API.
+// Per-domain cache for catch-all status.
 const _msftCatchAllCache = new Map();
 
 /**
  * Single M365 API call (no retry).
+ * CRITICAL FIX: Check IfExistsResult BEFORE ThrottleStatus.
+ * Microsoft sometimes returns a valid IfExistsResult (0 or 1) alongside
+ * ThrottleStatus=1. The IfExistsResult is still accurate — throttle just
+ * means "slow down" not "result is invalid".
  */
 async function _checkMicrosoftMailboxOnce(email) {
     if (!_fetch) return { result: 'api_error', reason: 'no_fetch' };
@@ -125,12 +127,15 @@ async function _checkMicrosoftMailboxOnce(email) {
         const ifExists  = data.IfExistsResult;
         const throttled = data.ThrottleStatus === 1;
 
-        if (throttled) return { result: 'throttled' };
-
-        if (ifExists === 0) return { result: 'exists' };
-        if (ifExists === 5) return { result: 'exists' };
+        // ── CHECK IfExistsResult FIRST ──
+        // Microsoft returns valid IfExistsResult even when ThrottleStatus=1.
+        // The result is still accurate; throttle just means "slow down".
+        if (ifExists === 0 || ifExists === 5) return { result: 'exists' };
         if (ifExists === 1) return { result: 'not_found' };
         if (ifExists === 6) return { result: 'federated' };
+
+        // Only treat as throttled if IfExistsResult was ambiguous/missing
+        if (throttled) return { result: 'throttled' };
 
         return { result: 'unknown', ifExists };
     } catch (e) {
@@ -140,13 +145,12 @@ async function _checkMicrosoftMailboxOnce(email) {
 }
 
 /**
- * Check Microsoft mailbox with aggressive retry + exponential backoff.
- * 5 retries with 2s, 4s, 6s, 8s, 10s delays — M365 API is the ONLY reliable
- * source for M365 domains. SMTP gives unreliable results for these domains.
+ * Check Microsoft mailbox with retry + exponential backoff.
+ * 5 retries with 2s, 3s, 5s, 8s, 12s delays.
  */
 async function checkMicrosoftMailbox(email) {
     const MAX_RETRIES = 5;
-    const BACKOFF_MS = [2000, 4000, 6000, 8000, 10000];
+    const BACKOFF_MS = [2000, 3000, 5000, 8000, 12000];
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         const result = await _checkMicrosoftMailboxOnce(email);
@@ -158,34 +162,62 @@ async function checkMicrosoftMailbox(email) {
 
         // Throttled or transient error — retry with backoff
         if ((result.result === 'throttled' || result.result === 'api_error') && attempt < MAX_RETRIES) {
-            await new Promise(r => setTimeout(r, BACKOFF_MS[attempt] || 10000));
+            await new Promise(r => setTimeout(r, BACKOFF_MS[attempt] || 12000));
             continue;
         }
 
-        // Final attempt failed
         return result;
     }
     return { result: 'api_error', reason: 'max_retries' };
 }
 
 /**
- * Check M365 catch-all status for a domain (cached).
- * Probes a random fake address — if the API says "exists", it's catch-all.
+ * Check M365 catch-all status for a domain using SMTP.
+ * The M365 API checks Azure AD directory, but some orgs have Exchange
+ * transport rules that accept ALL mail even for non-existent users.
+ * Only SMTP can detect these transport-rule catch-alls.
+ * Result is cached per domain.
  */
-async function isMsftDomainCatchAll(domain) {
+async function isMsftDomainCatchAll(domain, mxHosts) {
     if (_msftCatchAllCache.has(domain)) return _msftCatchAllCache.get(domain);
 
+    // Strategy 1: M365 API probe (fast, but can't detect transport rules)
     const fakeEmail = `nonexistent-probe-${Math.random().toString(36).slice(2, 10)}@${domain}`;
-    const fakeCheck = await checkMicrosoftMailbox(fakeEmail);
-    const isCatchAll = fakeCheck.result === 'exists';
-    _msftCatchAllCache.set(domain, isCatchAll);
+    const fakeApiCheck = await checkMicrosoftMailbox(fakeEmail);
+    
+    if (fakeApiCheck.result === 'exists') {
+        // API says fake address exists → definite catch-all in Azure AD
+        _msftCatchAllCache.set(domain, true);
+        return true;
+    }
 
+    // Strategy 2: SMTP probe for transport-rule catch-alls
+    // Some M365 domains have Exchange transport rules that route ALL inbound
+    // mail to a shared mailbox, even for addresses not in Azure AD.
+    // The API returns not_found but SMTP accepts → transport-rule catch-all.
+    if (mxHosts && mxHosts.length > 0) {
+        try {
+            await _smtpAcquire();
+            try {
+                const { smtpResult } = await checkMailbox(mxHosts, domain, fakeEmail);
+                if (smtpResult && smtpResult.result === 'accepted') {
+                    _msftCatchAllCache.set(domain, true);
+                    return true;
+                }
+            } finally {
+                _smtpRelease();
+            }
+        } catch (e) {
+            // SMTP failed — not catch-all
+        }
+    }
+
+    _msftCatchAllCache.set(domain, false);
     if (_msftCatchAllCache.size > 5000) {
         const firstKey = _msftCatchAllCache.keys().next().value;
         _msftCatchAllCache.delete(firstKey);
     }
-
-    return isCatchAll;
+    return false;
 }
 
 
@@ -229,17 +261,14 @@ async function verifyEmail(rawEmail) {
     const isM365 = mxProvider === 'Microsoft 365';
 
     // ────────────────────────────────────────────────────────────────────────
-    // FAST PATH: Microsoft 365 domains → use API EXCLUSIVELY
+    // FAST PATH: Microsoft 365 domains → use API as PRIMARY
     // ────────────────────────────────────────────────────────────────────────
-    // CRITICAL: M365 blocks SMTP probes from most IPs, making SMTP results
-    // unreliable. The GetCredentialType API is the ONLY reliable source.
-    // We NEVER fall through to SMTP for M365 — if the API fails after all
-    // retries, we classify based on what we know (anti-probe unknown).
     if (isM365) {
         const msftCheck = await checkMicrosoftMailbox(email);
 
         if (msftCheck.result === 'exists') {
-            const catchAll = await isMsftDomainCatchAll(domain);
+            // Mailbox exists in Azure AD. Check if domain is catch-all.
+            const catchAll = await isMsftDomainCatchAll(domain, mxHosts);
             return buildResult({
                 email, localPart, domain,
                 smtpOutcome: { result: 'accepted', code: 250, responseText: 'msft_api_exists' },
@@ -250,11 +279,13 @@ async function verifyEmail(rawEmail) {
         }
 
         if (msftCheck.result === 'not_found') {
-            const catchAll = await isMsftDomainCatchAll(domain);
+            // Mailbox NOT in Azure AD. But check if domain has transport-rule
+            // catch-all (accepts all mail via Exchange rules, not Azure AD).
+            const catchAll = await isMsftDomainCatchAll(domain, mxHosts);
             if (catchAll) {
                 return buildResult({
                     email, localPart, domain,
-                    smtpOutcome: { result: 'accepted', code: 250, responseText: 'msft_catchall_inferred' },
+                    smtpOutcome: { result: 'accepted', code: 250, responseText: 'msft_catchall_transport_rule' },
                     isCatchAllDomain: true,
                     hadMx: true,
                     mxHosts,
@@ -271,11 +302,9 @@ async function verifyEmail(rawEmail) {
         }
 
         if (msftCheck.result === 'federated') {
-            // Federated domain — Azure AD doesn't manage mailboxes directly.
-            // Fall through to SMTP probe as the only option.
+            // Federated domain — fall through to SMTP
         } else {
-            // API failed after all retries (throttled/error).
-            // For M365, SMTP is unreliable — classify as unknown anti-probe.
+            // API failed after all retries — classify as unknown anti-probe
             return buildResult({
                 email, localPart, domain,
                 smtpOutcome: { result: 'connection_failed' },
