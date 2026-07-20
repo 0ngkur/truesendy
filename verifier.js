@@ -40,39 +40,22 @@ function _smtpRelease() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const MSFT_API_URL = 'https://login.microsoftonline.com/common/GetCredentialType';
 
-// ── Simple rate limiter: 2 concurrent API calls, 300ms between each ──────────
-const MSFT_MAX_CONCURRENT = 2;
-const MSFT_MIN_INTERVAL   = 300;
-let _msftActive   = 0;
-let _msftLastCall = 0;
-const _msftQueue  = [];
+// ── Serial rate limiter for M365 API ─────────────────────────────────────────
+// With 100+ M365 emails in bulk, even 2 concurrent triggers throttling.
+// Serial queue with 500ms gap = ~2 req/sec. This prevents ThrottleStatus=1
+// and ensures every email gets a definitive exists/not_found result.
+// Speed: ~50s for 100 M365 emails. Accuracy >> speed.
+let _msftChain = Promise.resolve();
 
 function _msftAcquire() {
     return new Promise(resolve => {
-        const tryRun = () => {
-            const now  = Date.now();
-            const wait = Math.max(0, MSFT_MIN_INTERVAL - (now - _msftLastCall));
-            if (_msftActive < MSFT_MAX_CONCURRENT && wait === 0) {
-                _msftActive++;
-                _msftLastCall = Date.now();
-                resolve();
-            } else {
-                setTimeout(tryRun, Math.max(50, wait || 50));
-            }
-        };
-        if (_msftActive < MSFT_MAX_CONCURRENT) {
-            tryRun();
-        } else {
-            _msftQueue.push(tryRun);
-        }
+        _msftChain = _msftChain.then(() => {
+            return new Promise(r => setTimeout(r, 500));
+        }).then(() => resolve());
     });
 }
 function _msftRelease() {
-    _msftActive = Math.max(0, _msftActive - 1);
-    if (_msftQueue.length) {
-        const next = _msftQueue.shift();
-        setTimeout(next, MSFT_MIN_INTERVAL);
-    }
+    // No-op for serial queue (chain handles sequencing)
 }
 
 // Per-domain cache for catch-all status.
@@ -129,13 +112,13 @@ async function _checkMicrosoftMailboxOnce(email) {
         const isFederated = !!(credentials.FederationRedirectUrl || credentials.FederationProvider);
         if (isFederated || ifExists === 6) return { result: 'federated' };
 
-        // ── Trust IfExistsResult even when throttled ──
-        // Data shows IfExistsResult is generally accurate with ThrottleStatus=1.
-        // Treating as unreliable causes too many false "unknown" results (60% → 55%).
-        if (ifExists === 0 || ifExists === 5) return { result: 'exists' };
+        // ── Handle ALL IfExistsResult codes ──
+        // 0 = UserExists, 4 = UserExists (managed/non-federated), 5 = ExistsInOtherProvider
+        if (ifExists === 0 || ifExists === 4 || ifExists === 5) return { result: 'exists' };
+        // 1 = UserNotFound — definitive rejection
         if (ifExists === 1) return { result: 'not_found' };
-
-        if (throttled) return { result: 'throttled' };
+        // 2 = Throttled — Microsoft explicitly says result is unreliable → trigger retry
+        if (ifExists === 2 || throttled) return { result: 'throttled' };
 
         return { result: 'unknown', ifExists };
     } catch (e) {
@@ -301,14 +284,11 @@ async function verifyEmail(rawEmail) {
         if (msftCheck.result === 'federated') {
             // Fall through to SMTP
         } else {
-            // API failed after all retries → unknown
-            return buildResult({
-                email, localPart, domain,
-                smtpOutcome: { result: 'connection_failed' },
-                isCatchAllDomain: false,
-                hadMx: true,
-                mxHosts,
-            });
+            // API failed after all retries → fall through to SMTP instead of
+            // returning unknown. SMTP often succeeds even when the M365 API is
+            // throttled/blocked, and will give us a definitive result.
+            // Previous behavior returned 'unknown' here, creating false unknowns
+            // for M365 domains that SMTP could verify.
         }
     }
 
@@ -320,10 +300,15 @@ async function verifyEmail(rawEmail) {
     try {
         ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email));
 
-        // ── SMTP RETRY on connection_failed ──────────────────────────────────
-        // Transient failures are common under load. One retry handles most.
+        // ── SMTP RETRY with exponential backoff ──────────────────────────────
+        // Transient failures are common under load. Two retries with increasing
+        // delay handles most cases (greylisting, rate limiting, temp errors).
         if (smtpResult && smtpResult.result === 'connection_failed') {
             await new Promise(r => setTimeout(r, 1000)); // 1s cooldown
+            ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email));
+        }
+        if (smtpResult && smtpResult.result === 'connection_failed') {
+            await new Promise(r => setTimeout(r, 3000)); // 3s cooldown (exponential)
             ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email));
         }
     } finally {
