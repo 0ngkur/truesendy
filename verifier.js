@@ -266,9 +266,32 @@ async function verifyEmail(rawEmail) {
         const msftCheck = await checkMicrosoftMailbox(email);
 
         if (msftCheck.result === 'exists') {
-            // ── User EXISTS in Azure AD → SAFE ──
-            // When the API confirms the user exists, that's definitive.
-            // Don't check catch-all — this specific mailbox is real.
+            // ── User EXISTS in Azure AD ──
+            // API says account exists, but the mailbox may be disabled/deprovisioned.
+            // Do SMTP probe to confirm: if SMTP explicitly rejects (550) → invalid.
+            // SMTP rejection is always reliable; acceptance may not be.
+            try {
+                await _smtpAcquire();
+                try {
+                    const { smtpResult } = await checkMailbox(mxHosts, domain, email);
+                    if (smtpResult && smtpResult.result === 'rejected' &&
+                        (smtpResult.rejectionType === 'mailbox_not_found' || smtpResult.rejectionType === 'mailbox_disabled')) {
+                        // SMTP explicitly says mailbox doesn't exist → invalid
+                        return buildResult({
+                            email, localPart, domain,
+                            smtpOutcome: smtpResult,
+                            isCatchAllDomain: false,
+                            hadMx: true,
+                            mxHosts,
+                        });
+                    }
+                } finally {
+                    _smtpRelease();
+                }
+            } catch (e) {
+                // SMTP failed — trust API, classify as safe
+            }
+            // SMTP accepted or failed → trust API, user is real
             return buildResult({
                 email, localPart, domain,
                 smtpOutcome: { result: 'accepted', code: 250, responseText: 'msft_api_exists' },
