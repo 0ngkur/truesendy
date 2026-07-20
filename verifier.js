@@ -17,9 +17,9 @@ try {
 }
 
 // ── Global SMTP concurrency cap ──────────────────────────────────────────────
-// 5 concurrent SMTP connections: low enough to avoid rate-limiting on
-// enterprise gateways, high enough for reasonable throughput.
-const SMTP_MAX_CONCURRENCY = 5;
+// 10 concurrent SMTP connections: each of 5 server workers can run
+// real probe + catch-all probe simultaneously without queueing.
+const SMTP_MAX_CONCURRENCY = 10;
 let _smtpActive = 0;
 const _smtpQueue = [];
 const SMTP_MAX_QUEUE = 200;
@@ -151,7 +151,7 @@ async function _checkMicrosoftMailboxOnce(email) {
  */
 async function checkMicrosoftMailbox(email) {
     const MAX_RETRIES = 3;
-    const BACKOFF_MS = [3000, 6000, 10000];
+    const BACKOFF_MS = [2000, 4000, 8000];
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         const result = await _checkMicrosoftMailboxOnce(email);
@@ -323,7 +323,7 @@ async function verifyEmail(rawEmail) {
         // ── SMTP RETRY on connection_failed ──────────────────────────────────
         // Transient failures are common under load. One retry handles most.
         if (smtpResult && smtpResult.result === 'connection_failed') {
-            await new Promise(r => setTimeout(r, 2000)); // 2s cooldown
+            await new Promise(r => setTimeout(r, 1000)); // 1s cooldown
             ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email));
         }
     } finally {
