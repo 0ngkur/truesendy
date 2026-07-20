@@ -990,11 +990,11 @@ async function processJob(jobId) {
     const job = activeJobs[jobId];
     if (!job) return;
 
-    // ── Concurrency: 10 workers.
-    // Matches processing capacity: 8 SMTP slots + 3 M365 API slots.
-    // Lower than 20 to prevent burst rate-limiting on enterprise gateways
-    // which was causing mass "unknown" results in bulk tests.
-    const CONCURRENCY = 10;
+    // ── Concurrency: 5 workers.
+    // Matches SMTP capacity (5 slots) + M365 API (2 concurrent).
+    // Lower concurrency = fewer simultaneous probes = less rate-limiting
+    // = more accurate results. Speed trade-off is acceptable (~3-4 min for 246 emails).
+    const CONCURRENCY = 5;
     let index = 0;
 
     // ── [FIX #5] Global 30-minute job timeout — kills runaway jobs

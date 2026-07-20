@@ -17,9 +17,9 @@ try {
 }
 
 // ── Global SMTP concurrency cap ──────────────────────────────────────────────
-// Lower concurrency prevents burst-triggering rate limits on enterprise gateways.
-// 8 concurrent SMTP connections is the sweet spot: fast enough, not triggering.
-const SMTP_MAX_CONCURRENCY = 8;
+// 5 concurrent SMTP connections: low enough to avoid rate-limiting on
+// enterprise gateways, high enough for reasonable throughput.
+const SMTP_MAX_CONCURRENCY = 5;
 let _smtpActive = 0;
 const _smtpQueue = [];
 const SMTP_MAX_QUEUE = 200;
@@ -40,62 +40,51 @@ function _smtpRelease() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const MSFT_API_URL = 'https://login.microsoftonline.com/common/GetCredentialType';
 
-// ── Concurrent rate limiter for M365 API ─────────────────────────────────────
-// Allow up to 3 concurrent API calls with 200ms minimum between each call.
-// This gives ~15 calls/sec max burst, ~5/sec sustained — well within limits.
-// Previous serial 600ms queue caused 60+ second backlogs for bulk lists.
-const MSFT_MAX_CONCURRENT = 3;
-const MSFT_MIN_INTERVAL   = 200; // ms minimum between any two calls
+// ── Simple rate limiter: 2 concurrent API calls, 300ms between each ──────────
+const MSFT_MAX_CONCURRENT = 2;
+const MSFT_MIN_INTERVAL   = 300;
 let _msftActive   = 0;
 let _msftLastCall = 0;
-const _msftWaiters = [];
+const _msftQueue  = [];
 
-function _msftRelease() {
-    _msftActive = Math.max(0, _msftActive - 1);
-    if (_msftWaiters.length) {
-        const next = _msftWaiters.shift();
-        setTimeout(next, 0);
-    }
-}
-
-function _msftRateAcquire() {
+function _msftAcquire() {
     return new Promise(resolve => {
-        function tryAcquire() {
+        const tryRun = () => {
             const now  = Date.now();
             const wait = Math.max(0, MSFT_MIN_INTERVAL - (now - _msftLastCall));
             if (_msftActive < MSFT_MAX_CONCURRENT && wait === 0) {
                 _msftActive++;
-                _msftLastCall = now;
+                _msftLastCall = Date.now();
                 resolve();
             } else {
-                setTimeout(() => {
-                    // Try from queue when slot/time is available
-                    const n2   = Date.now();
-                    const wait2 = Math.max(0, MSFT_MIN_INTERVAL - (n2 - _msftLastCall));
-                    if (_msftActive < MSFT_MAX_CONCURRENT && wait2 === 0) {
-                        _msftActive++;
-                        _msftLastCall = n2;
-                        resolve();
-                    } else {
-                        _msftWaiters.push(tryAcquire);
-                    }
-                }, Math.max(50, wait));
+                setTimeout(tryRun, Math.max(50, wait || 50));
             }
+        };
+        if (_msftActive < MSFT_MAX_CONCURRENT) {
+            tryRun();
+        } else {
+            _msftQueue.push(tryRun);
         }
-        tryAcquire();
     });
+}
+function _msftRelease() {
+    _msftActive = Math.max(0, _msftActive - 1);
+    if (_msftQueue.length) {
+        const next = _msftQueue.shift();
+        setTimeout(next, MSFT_MIN_INTERVAL);
+    }
 }
 
 // Per-domain cache for catch-all status.
 const _msftCatchAllCache = new Map();
 
 /**
- * Single M365 API call (no retry). Rate-limited through concurrent semaphore.
+ * Single M365 API call with rate limiting.
  */
 async function _checkMicrosoftMailboxOnce(email) {
     if (!_fetch) return { result: 'api_error', reason: 'no_fetch' };
 
-    await _msftRateAcquire();
+    await _msftAcquire();
     try {
         const body = JSON.stringify({
             username: email,
@@ -137,17 +126,15 @@ async function _checkMicrosoftMailboxOnce(email) {
         const credentials = data.Credentials || {};
 
         // ── Check FEDERATION first — always reliable even when throttled ──
-        // Federated domains use external IdP; IfExistsResult=0 is meaningless.
         const isFederated = !!(credentials.FederationRedirectUrl || credentials.FederationProvider);
         if (isFederated || ifExists === 6) return { result: 'federated' };
 
-        // ── Check IfExistsResult — trust it even when throttled ──
-        // Data shows IfExistsResult is generally accurate even with ThrottleStatus=1.
-        // Treating it as unreliable causes too many false "unknown" results.
+        // ── Trust IfExistsResult even when throttled ──
+        // Data shows IfExistsResult is generally accurate with ThrottleStatus=1.
+        // Treating as unreliable causes too many false "unknown" results (60% → 55%).
         if (ifExists === 0 || ifExists === 5) return { result: 'exists' };
         if (ifExists === 1) return { result: 'not_found' };
 
-        // Only treat as throttled if IfExistsResult was truly ambiguous
         if (throttled) return { result: 'throttled' };
 
         return { result: 'unknown', ifExists };
@@ -161,11 +148,10 @@ async function _checkMicrosoftMailboxOnce(email) {
 
 /**
  * Check Microsoft mailbox with retry + exponential backoff.
- * Longer backoffs (5s, 10s, 15s) to let throttle clear.
  */
 async function checkMicrosoftMailbox(email) {
     const MAX_RETRIES = 3;
-    const BACKOFF_MS = [5000, 10000, 15000];
+    const BACKOFF_MS = [3000, 6000, 10000];
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         const result = await _checkMicrosoftMailboxOnce(email);
@@ -175,7 +161,7 @@ async function checkMicrosoftMailbox(email) {
         }
 
         if ((result.result === 'throttled' || result.result === 'api_error') && attempt < MAX_RETRIES) {
-            await new Promise(r => setTimeout(r, BACKOFF_MS[attempt] || 15000));
+            await new Promise(r => setTimeout(r, BACKOFF_MS[attempt] || 10000));
             continue;
         }
 
@@ -227,17 +213,13 @@ async function isMsftDomainCatchAll(domain, mxHosts) {
 }
 
 // ── Providers whose SMTP acceptance is UNRELIABLE ────────────────────────────
-// These are security GATEWAYS that sit in front of the real mail server.
-// They accept ALL inbound SMTP (even fakes), then filter internally.
-// For these, a single SMTP 250 does NOT prove the mailbox exists.
-// However, if catch-all IS detected via fake probe, classify as catch_all.
-// If SMTP explicitly rejects (5xx mailbox_not_found), that IS reliable.
+// Mimecast accepts ALL inbound mail at SMTP level, then filters internally.
+// An SMTP 250 from Mimecast does NOT mean the mailbox exists.
+// But if catch-all IS detected, still classify as catch_all.
+// IMPORTANT: Only Mimecast here. Barracuda/Proofpoint SMTP rejections ARE
+// reliable — adding them caused false unknowns in testing.
 const SMTP_UNRELIABLE_PROVIDERS = new Set([
-    'Mimecast',    // Mimecast gateway accepts all, filters internally
-    'Barracuda',   // Barracuda ESG accepts all at SMTP level
-    'Proofpoint',  // Proofpoint gateway — RCPT TO is unreliable
-    'MessageLabs', // Broadcom/Symantec gateway — same behavior
-    'SpamExperts', // SpamExperts relay — accepts all
+    'Mimecast',
 ]);
 
 
@@ -337,15 +319,21 @@ async function verifyEmail(rawEmail) {
     let smtpResult, isCatchAll;
     try {
         ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email));
+
+        // ── SMTP RETRY on connection_failed ──────────────────────────────────
+        // Transient failures are common under load. One retry handles most.
+        if (smtpResult && smtpResult.result === 'connection_failed') {
+            await new Promise(r => setTimeout(r, 2000)); // 2s cooldown
+            ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email));
+        }
     } finally {
         _smtpRelease();
     }
 
-    // ── SMTP-unreliable providers (Mimecast etc.) ───────────────────────────
+    // ── SMTP-unreliable providers (Mimecast only) ───────────────────────────
     if (SMTP_UNRELIABLE_PROVIDERS.has(mxProvider)) {
         if (smtpResult && smtpResult.result === 'accepted') {
             if (isCatchAll) {
-                // Catch-all detected → classify as catch_all
                 return buildResult({
                     email, localPart, domain,
                     smtpOutcome: smtpResult,
@@ -354,7 +342,6 @@ async function verifyEmail(rawEmail) {
                     mxHosts,
                 });
             }
-            // Not catch-all but accepted → unknown (can't trust)
             return buildResult({
                 email, localPart, domain,
                 smtpOutcome: { result: 'temp_fail' },
