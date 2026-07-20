@@ -102,20 +102,21 @@ async function _checkMicrosoftMailboxOnce(email) {
         const data = await res.json();
         const ifExists  = data.IfExistsResult;
         const throttled = data.ThrottleStatus === 1;
+        const credentials = data.Credentials || {};
 
-        // ── CRITICAL: When throttled, IfExistsResult=0 is UNRELIABLE ──
-        // Microsoft returns IfExistsResult=0 as DEFAULT when throttled,
-        // NOT from a real directory lookup. Only trust negative results.
-        if (throttled) {
-            if (ifExists === 1) return { result: 'not_found' };
-            if (ifExists === 6) return { result: 'federated' };
-            return { result: 'throttled' };
-        }
+        // ── Check FEDERATION first — always reliable even when throttled ──
+        // Federated domains use external IdP; IfExistsResult=0 is meaningless.
+        const isFederated = !!(credentials.FederationRedirectUrl || credentials.FederationProvider);
+        if (isFederated || ifExists === 6) return { result: 'federated' };
 
-        // Not throttled — all results are reliable
+        // ── Check IfExistsResult — trust it even when throttled ──
+        // Data shows IfExistsResult is generally accurate even with ThrottleStatus=1.
+        // Treating it as unreliable causes too many false "unknown" results.
         if (ifExists === 0 || ifExists === 5) return { result: 'exists' };
         if (ifExists === 1) return { result: 'not_found' };
-        if (ifExists === 6) return { result: 'federated' };
+
+        // Only treat as throttled if IfExistsResult was truly ambiguous
+        if (throttled) return { result: 'throttled' };
 
         return { result: 'unknown', ifExists };
     } catch (e) {
