@@ -17,7 +17,9 @@ try {
 }
 
 // ── Global SMTP concurrency cap ──────────────────────────────────────────────
-const SMTP_MAX_CONCURRENCY = 20;
+// Lower concurrency prevents burst-triggering rate limits on enterprise gateways.
+// 8 concurrent SMTP connections is the sweet spot: fast enough, not triggering.
+const SMTP_MAX_CONCURRENCY = 8;
 let _smtpActive = 0;
 const _smtpQueue = [];
 const SMTP_MAX_QUEUE = 200;
@@ -38,19 +40,49 @@ function _smtpRelease() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const MSFT_API_URL = 'https://login.microsoftonline.com/common/GetCredentialType';
 
-// ── Serial queue rate limiter ────────────────────────────────────────────────
-// Microsoft throttles GetCredentialType at ~10-20 req/min per IP.
-// A serial queue with 600ms gap = ~100 req/min — safe for sustained traffic.
-// This prevents burst patterns that trigger ThrottleStatus=1.
-const MSFT_MIN_INTERVAL = 600; // ms between API calls
-let _msftCallChain = Promise.resolve();
+// ── Concurrent rate limiter for M365 API ─────────────────────────────────────
+// Allow up to 3 concurrent API calls with 200ms minimum between each call.
+// This gives ~15 calls/sec max burst, ~5/sec sustained — well within limits.
+// Previous serial 600ms queue caused 60+ second backlogs for bulk lists.
+const MSFT_MAX_CONCURRENT = 3;
+const MSFT_MIN_INTERVAL   = 200; // ms minimum between any two calls
+let _msftActive   = 0;
+let _msftLastCall = 0;
+const _msftWaiters = [];
+
+function _msftRelease() {
+    _msftActive = Math.max(0, _msftActive - 1);
+    if (_msftWaiters.length) {
+        const next = _msftWaiters.shift();
+        setTimeout(next, 0);
+    }
+}
 
 function _msftRateAcquire() {
     return new Promise(resolve => {
-        _msftCallChain = _msftCallChain.then(async () => {
-            await new Promise(r => setTimeout(r, MSFT_MIN_INTERVAL));
-            resolve();
-        });
+        function tryAcquire() {
+            const now  = Date.now();
+            const wait = Math.max(0, MSFT_MIN_INTERVAL - (now - _msftLastCall));
+            if (_msftActive < MSFT_MAX_CONCURRENT && wait === 0) {
+                _msftActive++;
+                _msftLastCall = now;
+                resolve();
+            } else {
+                setTimeout(() => {
+                    // Try from queue when slot/time is available
+                    const n2   = Date.now();
+                    const wait2 = Math.max(0, MSFT_MIN_INTERVAL - (n2 - _msftLastCall));
+                    if (_msftActive < MSFT_MAX_CONCURRENT && wait2 === 0) {
+                        _msftActive++;
+                        _msftLastCall = n2;
+                        resolve();
+                    } else {
+                        _msftWaiters.push(tryAcquire);
+                    }
+                }, Math.max(50, wait));
+            }
+        }
+        tryAcquire();
     });
 }
 
@@ -58,7 +90,7 @@ function _msftRateAcquire() {
 const _msftCatchAllCache = new Map();
 
 /**
- * Single M365 API call (no retry). Serialized through rate limiter.
+ * Single M365 API call (no retry). Rate-limited through concurrent semaphore.
  */
 async function _checkMicrosoftMailboxOnce(email) {
     if (!_fetch) return { result: 'api_error', reason: 'no_fetch' };
@@ -122,6 +154,8 @@ async function _checkMicrosoftMailboxOnce(email) {
     } catch (e) {
         if (e.name === 'AbortError') return { result: 'api_error', reason: 'timeout' };
         return { result: 'api_error', reason: e.message };
+    } finally {
+        _msftRelease();
     }
 }
 
@@ -193,10 +227,17 @@ async function isMsftDomainCatchAll(domain, mxHosts) {
 }
 
 // ── Providers whose SMTP acceptance is UNRELIABLE ────────────────────────────
-// Accept ALL mail at SMTP level then filter after. Single acceptance ≠ valid.
-// But if catch-all IS detected, still classify as catch_all (Reon does this).
+// These are security GATEWAYS that sit in front of the real mail server.
+// They accept ALL inbound SMTP (even fakes), then filter internally.
+// For these, a single SMTP 250 does NOT prove the mailbox exists.
+// However, if catch-all IS detected via fake probe, classify as catch_all.
+// If SMTP explicitly rejects (5xx mailbox_not_found), that IS reliable.
 const SMTP_UNRELIABLE_PROVIDERS = new Set([
-    'Mimecast',
+    'Mimecast',    // Mimecast gateway accepts all, filters internally
+    'Barracuda',   // Barracuda ESG accepts all at SMTP level
+    'Proofpoint',  // Proofpoint gateway — RCPT TO is unreliable
+    'MessageLabs', // Broadcom/Symantec gateway — same behavior
+    'SpamExperts', // SpamExperts relay — accepts all
 ]);
 
 

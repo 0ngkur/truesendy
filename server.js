@@ -990,11 +990,11 @@ async function processJob(jobId) {
     const job = activeJobs[jobId];
     if (!job) return;
 
-    // ── Concurrency: 20 workers.
-    // Must match actual processing capacity: 15 SMTP slots + 5 M365 API slots = 20.
-    // Higher values cause thundering-herd: mail servers see burst connections
-    // from the same IP → greylisting/temp-blocks → mass "unknown" results.
-    const CONCURRENCY = 20;
+    // ── Concurrency: 10 workers.
+    // Matches processing capacity: 8 SMTP slots + 3 M365 API slots.
+    // Lower than 20 to prevent burst rate-limiting on enterprise gateways
+    // which was causing mass "unknown" results in bulk tests.
+    const CONCURRENCY = 10;
     let index = 0;
 
     // ── [FIX #5] Global 30-minute job timeout — kills runaway jobs
