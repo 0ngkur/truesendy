@@ -69,7 +69,7 @@ function _msftRelease() {
 // Avoids redundant fake-address probes when many emails share a domain.
 const _msftCatchAllCache = new Map();
 
-async function checkMicrosoftMailbox(email) {
+async function _checkMicrosoftMailboxOnce(email) {
     if (!_fetch) return { result: 'api_error', reason: 'no_fetch' };
 
     await _msftAcquire();
@@ -126,6 +126,35 @@ async function checkMicrosoftMailbox(email) {
     } finally {
         _msftRelease();
     }
+}
+
+/**
+ * Check Microsoft mailbox with retry + exponential backoff.
+ * Microsoft throttles aggressive parallel requests during bulk verification.
+ * 3 retries with 1s, 2s, 4s delays handles transient throttling.
+ */
+async function checkMicrosoftMailbox(email) {
+    const MAX_RETRIES = 3;
+    const BACKOFF_MS = [1000, 2000, 4000];
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const result = await _checkMicrosoftMailboxOnce(email);
+
+        // Success or definitive answer — return immediately
+        if (result.result === 'exists' || result.result === 'not_found' || result.result === 'federated') {
+            return result;
+        }
+
+        // Throttled or transient error — retry with backoff
+        if ((result.result === 'throttled' || result.result === 'api_error') && attempt < MAX_RETRIES) {
+            await new Promise(r => setTimeout(r, BACKOFF_MS[attempt] || 4000));
+            continue;
+        }
+
+        // Final attempt failed
+        return result;
+    }
+    return { result: 'api_error', reason: 'max_retries' };
 }
 
 /**
