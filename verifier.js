@@ -165,27 +165,50 @@ async function checkMicrosoftMailbox(email) {
 }
 
 /**
- * Check M365 catch-all status using API ONLY (not SMTP).
- * SMTP gives false positives on M365 because Exchange transport rules
- * or grey-listing can temporarily accept all addresses.
- * The API is the authoritative source for M365 catch-all status.
+ * Check M365 catch-all status — hybrid API + SMTP approach.
+ * Strategy 1: API probe (fast, detects Azure AD catch-all)
+ * Strategy 2: SMTP probe fallback (detects Exchange transport-rule catch-all)
+ * Result is cached per domain.
  */
-async function isMsftDomainCatchAll(domain) {
+async function isMsftDomainCatchAll(domain, mxHosts) {
     if (_msftCatchAllCache.has(domain)) return _msftCatchAllCache.get(domain);
 
+    // Strategy 1: M365 API probe for Azure AD catch-all
     const fakeEmail = `nonexistent-probe-${Math.random().toString(36).slice(2, 10)}@${domain}`;
     const fakeCheck = await checkMicrosoftMailbox(fakeEmail);
 
-    // If API says fake address exists → definite catch-all in Azure AD
-    const isCatchAll = fakeCheck.result === 'exists';
-    _msftCatchAllCache.set(domain, isCatchAll);
+    if (fakeCheck.result === 'exists') {
+        // API says fake address exists → definite Azure AD catch-all
+        _msftCatchAllCache.set(domain, true);
+        return true;
+    }
 
+    // Strategy 2: SMTP probe for transport-rule catch-all
+    // Some M365 domains have Exchange transport rules that route ALL inbound
+    // mail, even for addresses not in Azure AD. Only SMTP can detect this.
+    if (mxHosts && mxHosts.length > 0) {
+        try {
+            await _smtpAcquire();
+            try {
+                const { smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, fakeEmail);
+                if (smtpResult && smtpResult.result === 'accepted') {
+                    _msftCatchAllCache.set(domain, true);
+                    return true;
+                }
+            } finally {
+                _smtpRelease();
+            }
+        } catch (e) {
+            // SMTP failed — not catch-all
+        }
+    }
+
+    _msftCatchAllCache.set(domain, false);
     if (_msftCatchAllCache.size > 5000) {
         const firstKey = _msftCatchAllCache.keys().next().value;
         _msftCatchAllCache.delete(firstKey);
     }
-
-    return isCatchAll;
+    return false;
 }
 
 // ── Providers whose SMTP acceptance is UNRELIABLE ────────────────────────────
@@ -259,7 +282,7 @@ async function verifyEmail(rawEmail) {
             // ── User NOT in Azure AD ──
             // Check if domain has Azure AD catch-all (API only, not SMTP).
             // SMTP gives false positives due to transport rules/greylisting.
-            const catchAll = await isMsftDomainCatchAll(domain);
+            const catchAll = await isMsftDomainCatchAll(domain, mxHosts);
             if (catchAll) {
                 return buildResult({
                     email, localPart, domain,
