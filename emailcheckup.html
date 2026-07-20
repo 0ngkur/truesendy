@@ -434,7 +434,15 @@ nav{
       </div>
       <div class="stat-card red">
         <div class="val" id="stat-invalid">0</div>
-        <div class="lbl">✗ Removed</div>
+        <div class="lbl">✗ Invalid</div>
+      </div>
+      <div class="stat-card" style="border-color:#f59e0b">
+        <div class="val" id="stat-catchall" style="color:#f59e0b">0</div>
+        <div class="lbl">⚡ Catch All</div>
+      </div>
+      <div class="stat-card" style="border-color:#8b5cf6">
+        <div class="val" id="stat-unknown" style="color:#8b5cf6">0</div>
+        <div class="lbl">❓ Unknown</div>
       </div>
     </div>
     <div class="live-feed">
@@ -464,8 +472,11 @@ nav{
         <button class="cat-btn" data-cat="invalid" onclick="selectCategory('invalid')">
           ❌ Invalid Only (<span id="cat-invalid">0</span>)
         </button>
+        <button class="cat-btn" data-cat="catch_all" onclick="selectCategory('catch_all')">
+          ⚡ Catch All (<span id="cat-catchall">0</span>)
+        </button>
         <button class="cat-btn" data-cat="unknown" onclick="selectCategory('unknown')">
-          ❓ Unknown / Unverifiable (<span id="cat-unknown">0</span>)
+          ❓ Unknown (<span id="cat-unknown">0</span>)
         </button>
         <button class="cat-btn" data-cat="all" onclick="selectCategory('all')">
           📋 All Results (<span id="cat-all">0</span>)
@@ -745,16 +756,20 @@ function showProgress(total) {
   document.getElementById('progress-section').classList.add('show');
   document.getElementById('results-section').classList.remove('show');
   document.getElementById('live-list').innerHTML = '';
-  setProgress(0, 0, 0, total);
+  setProgress(0, 0, 0, total, 0, 0);
 }
 
-function setProgress(processed, valid, invalid, total) {
+function setProgress(processed, valid, invalid, total, catchAll, unknown) {
   const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
   document.getElementById('prog-pct').textContent   = pct + '%';
   document.getElementById('prog-bar').style.width   = pct + '%';
   document.getElementById('stat-processed').textContent = processed.toLocaleString();
   document.getElementById('stat-valid').textContent     = valid.toLocaleString();
   document.getElementById('stat-invalid').textContent   = invalid.toLocaleString();
+  const catchAllEl = document.getElementById('stat-catchall');
+  if (catchAllEl) catchAllEl.textContent = (catchAll || 0).toLocaleString();
+  const unknownEl = document.getElementById('stat-unknown');
+  if (unknownEl) unknownEl.textContent = (unknown || 0).toLocaleString();
 }
 
 function addLiveFeedItem(email, isValid) {
@@ -777,7 +792,7 @@ function pollJob() {
       const d = await r.json();
       if (!r.ok) { clearInterval(pollTimer); return; }
 
-      setProgress(d.processed, d.valid, d.invalid, d.total);
+      setProgress(d.processed, d.valid, d.invalid, d.total, d.catchAll || 0, d.unknown || 0);
 
       // Add live feed items
       (d.recentValid  || []).forEach(e => addLiveFeedItem(e, true));
@@ -786,22 +801,24 @@ function pollJob() {
       if (d.status === 'complete' || d.status === 'out_of_credits' || d.status === 'error' || d.status === 'expired') {
         clearInterval(pollTimer);
         finalJobId = currentJobId;
-        setProgress(d.processed, d.valid, d.invalid, d.total);
-        // Always show results — valid, invalid, and unknown are all downloadable
+        setProgress(d.processed, d.valid, d.invalid, d.total, d.catchAll || 0, d.unknown || 0);
+        // Always show results — valid, invalid, catch_all, and unknown are all downloadable
         showResults(d.valid || 0, d.processed);
-        if ((d.valid || 0) === 0 && (d.unknown || 0) === 0) {
+        if ((d.valid || 0) === 0 && (d.unknown || 0) === 0 && (d.catchAll || 0) === 0) {
           toast('No valid emails found — all invalid. Download below.', 'error');
         } else if ((d.valid || 0) === 0) {
-          toast('No confirmed-valid emails, but some are unverifiable (unknown).', 'error');
+          toast('No confirmed-valid emails, but some are catch-all or unverifiable (unknown).', 'error');
         }
         // Update category counts
         const invalidCount = (d.invalid || 0);
         const unknownCount = (d.unknown || 0);
+        const catchAllCount = (d.catchAll || 0);
         const allCount = d.processed || 0;
-        const vc = document.getElementById('cat-valid');  if (vc) vc.textContent = d.valid || 0;
-        const ic = document.getElementById('cat-invalid'); if (ic) ic.textContent = invalidCount;
-        const uc = document.getElementById('cat-unknown'); if (uc) uc.textContent = unknownCount;
-        const ac = document.getElementById('cat-all');     if (ac) ac.textContent = allCount;
+        const vc = document.getElementById('cat-valid');     if (vc) vc.textContent = d.valid || 0;
+        const ic = document.getElementById('cat-invalid');   if (ic) ic.textContent = invalidCount;
+        const cc = document.getElementById('cat-catchall');  if (cc) cc.textContent = catchAllCount;
+        const uc = document.getElementById('cat-unknown');   if (uc) uc.textContent = unknownCount;
+        const ac = document.getElementById('cat-all');       if (ac) ac.textContent = allCount;
         checkCredits(); // Refresh credit display
       }
     } catch {}
@@ -858,7 +875,7 @@ function selectCategory(cat) {
   downloadCategory = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`.cat-btn[data-cat="${cat}"]`).classList.add('active');
-  const labels = { valid: 'valid emails', invalid: 'invalid emails', unknown: 'unknown / unverifiable emails', all: 'all results' };
+  const labels = { valid: 'valid emails', invalid: 'invalid emails', catch_all: 'catch-all emails', unknown: 'unknown / unverifiable emails', all: 'all results' };
   document.getElementById('preview-label').textContent = `Preview — ${labels[cat]}`;
 }
 

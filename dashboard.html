@@ -284,7 +284,8 @@
                             <div class="donut-legend">
                                 <div class="leg-item"><span class="leg-dot" style="background:#10b981"></span>Valid <span class="leg-val" id="leg-valid">0</span></div>
                                 <div class="leg-item"><span class="leg-dot" style="background:#ef4444"></span>Invalid <span class="leg-val" id="leg-invalid">0</span></div>
-                                <div class="leg-item"><span class="leg-dot" style="background:#f59e0b"></span>Unknown <span class="leg-val" id="leg-unknown">0</span></div>
+                                <div class="leg-item"><span class="leg-dot" style="background:#f59e0b"></span>Catch All <span class="leg-val" id="leg-catchall">0</span></div>
+                                <div class="leg-item"><span class="leg-dot" style="background:#8b5cf6"></span>Unknown <span class="leg-val" id="leg-unknown">0</span></div>
                             </div>
                         </div>
                     </div>
@@ -458,19 +459,20 @@ function renderBarChart(usageLog) {
     }).join('');
 }
 
-// ═══════════════════ DONUT CHART (valid vs invalid) ═══════════════════
 function renderDonut(jobHistory) {
-    let valid = 0, invalid = 0, unknown = 0;
+    let valid = 0, invalid = 0, unknown = 0, catchAll = 0;
     (jobHistory || []).forEach(j => {
-        valid += (j.valid || 0); invalid += (j.invalid || 0); unknown += (j.unknown || 0);
+        valid += (j.valid || 0); invalid += (j.invalid || 0); unknown += (j.unknown || 0); catchAll += (j.catchAll || 0);
     });
-    const total = valid + invalid + unknown;
+    const total = valid + invalid + unknown + catchAll;
     document.getElementById('dc-total').textContent = total.toLocaleString();
     document.getElementById('leg-valid').textContent = valid.toLocaleString();
     document.getElementById('leg-invalid').textContent = invalid.toLocaleString();
+    const legCa = document.getElementById('leg-catchall');
+    if (legCa) legCa.textContent = catchAll.toLocaleString();
     const legUnk = document.getElementById('leg-unknown');
     if (legUnk) legUnk.textContent = unknown.toLocaleString();
-    // Donut: valid arc (green) + invalid arc (red), unknown is the remaining gray track
+    // Donut: valid arc (green) + invalid arc (red), catch_all+unknown is the remaining track
     const circ = 2 * Math.PI * 60;  // ~377
     const validArc = circ * (total > 0 ? valid / total : 0);
     const invalidArc = circ * (total > 0 ? invalid / total : 0);
@@ -521,10 +523,12 @@ async function quickVerify() {
             body: JSON.stringify({ email })
         }).then(r => r.json());
         if (r.error) { res.innerHTML = '<span style="color:var(--red)">' + r.error + '</span>'; return; }
-        if (r.status === 'valid') {
+        if (r.status === 'safe' || r.status === 'valid') {
             res.innerHTML = '<span style="color:var(--green);font-weight:600">✅ ' + email + ' is VALID</span>';
+        } else if (r.status === 'catch_all') {
+            res.innerHTML = '<span style="color:var(--amber);font-weight:600">⚡ ' + email + ' is CATCH-ALL</span>';
         } else if (r.status === 'unknown') {
-            res.innerHTML = '<span style="color:var(--amber);font-weight:600">❓ ' + email + ' is UNVERIFIABLE</span>';
+            res.innerHTML = '<span style="color:#8b5cf6;font-weight:600">❓ ' + email + ' is UNVERIFIABLE</span>';
         } else {
             res.innerHTML = '<span style="color:var(--red);font-weight:600">❌ ' + email + ' is INVALID</span>';
         }
@@ -537,16 +541,16 @@ function renderRecentJobs(jobs) {
     if (!jobs || !jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. <a href="/emailcheckup">Verify your first list →</a></div>'; return; }
     el.innerHTML = jobs.slice(0, 5).map(j => `<div class="card-row">
         <span class="lbl">${esc(j.filename || 'List')} · ${j.total} emails</span>
-        <span class="val"><span style="color:var(--green)">${j.valid}✓</span> <span style="color:var(--red)">${j.invalid}✗</span> <span style="color:var(--amber)">${j.unknown||0}?</span> <span style="color:var(--muted);font-size:.75rem">${timeAgo(j.date)}</span></span>
+        <span class="val"><span style="color:var(--green)">${j.valid}✓</span> <span style="color:var(--red)">${j.invalid}✗</span> <span style="color:var(--amber)">${j.catchAll||0}⚡</span> <span style="color:#8b5cf6">${j.unknown||0}?</span> <span style="color:var(--muted);font-size:.75rem">${timeAgo(j.date)}</span></span>
     </div>`).join('');
 }
 function renderTasks(jobs) {
     const el = document.getElementById('tasks-list');
     if (!jobs || !jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. Once you verify a list, it appears here with a re-download link.</div>'; return; }
-    el.innerHTML = '<table class="tbl"><thead><tr><th>Date</th><th>File</th><th>Total</th><th>Valid</th><th>Invalid</th><th>Unknown</th><th>Download</th></tr></thead><tbody>' +
+    el.innerHTML = '<table class="tbl"><thead><tr><th>Date</th><th>File</th><th>Total</th><th>Valid</th><th>Invalid</th><th>Catch All</th><th>Unknown</th><th>Download</th></tr></thead><tbody>' +
         jobs.map(j => `<tr>
             <td>${new Date(j.date).toLocaleDateString()}</td><td>${esc(j.filename||'List')}</td><td>${j.total}</td>
-            <td style="color:var(--green);font-weight:600">${j.valid}</td><td style="color:var(--red);font-weight:600">${j.invalid}</td><td style="color:var(--amber);font-weight:600">${j.unknown||0}</td>
+            <td style="color:var(--green);font-weight:600">${j.valid}</td><td style="color:var(--red);font-weight:600">${j.invalid}</td><td style="color:var(--amber);font-weight:600">${j.catchAll||0}</td><td style="color:#8b5cf6;font-weight:600">${j.unknown||0}</td>
             <td><a href="/api/download/${j.id}?format=original&category=all&token=${encodeURIComponent(token)}" class="btn btn-ghost" style="padding:.25rem .6rem;font-size:.75rem" target="_blank">⬇ CSV</a></td>
         </tr>`).join('') + '</tbody></table>';
 }

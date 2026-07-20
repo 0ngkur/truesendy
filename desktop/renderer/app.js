@@ -271,7 +271,7 @@ async function runVerify() {
     $('export-btn').disabled = true;
     resetStats();
     const BATCH = 500;
-    let valid = 0, invalid = 0, unknown = 0, skipped = 0;
+    let valid = 0, invalid = 0, unknown = 0, catchAll = 0, skipped = 0;
     lastResults = [];
     try {
         for (let i = 0; i < currentEmails.length; i += BATCH) {
@@ -282,13 +282,14 @@ async function runVerify() {
             }).then(r => r.json());
             if (r.error) { $('file-info').innerHTML = '<span style="color:var(--red)">✗ ' + r.error + '</span>'; break; }
             lastResults.push(...r.results);
-            valid   += r.valid;
-            invalid += r.invalid;
-            unknown += (r.unknown || 0);
-            skipped += (r.skipped || 0);
-            renderProgress(i + slice.length, currentEmails.length, valid, invalid, skipped, unknown);
+            valid    += r.valid;
+            invalid  += r.invalid;
+            unknown  += (r.unknown || 0);
+            catchAll += (r.catch_all || 0);
+            skipped  += (r.skipped || 0);
+            renderProgress(i + slice.length, currentEmails.length, valid, invalid, skipped, unknown, catchAll);
         }
-        $('export-btn').disabled = (valid + invalid) === 0;
+        $('export-btn').disabled = (valid + invalid + catchAll + unknown) === 0;
         loadBalance();
     } catch (e) {
         $('file-info').innerHTML = '<span style="color:var(--red)">✗ Network error — check the server URL in ⚙ Settings.</span>';
@@ -307,7 +308,7 @@ function resetStats() {
     const ea=$('ec-all'); if(ea) ea.textContent='0';
     $('results-table').innerHTML = '<div class="empty">Verifying…</div>';
 }
-function renderProgress(done, total, valid, invalid, skipped, r_unknown) {
+function renderProgress(done, total, valid, invalid, skipped, r_unknown, r_catchAll) {
     const pct = Math.round(done / total * 100);
     $('progress').style.width = pct + '%';
     $('progress-pct').textContent = pct + '%';
@@ -315,14 +316,15 @@ function renderProgress(done, total, valid, invalid, skipped, r_unknown) {
     $('st-invalid').textContent = invalid.toLocaleString();
     $('st-skipped').textContent = skipped.toLocaleString();
     // Update category counts
-    const ev = $('ec-valid');   if (ev) ev.textContent = valid;
-    const ei = $('ec-invalid'); if (ei) ei.textContent = invalid;
-    const eu = $('ec-unknown'); if (eu) eu.textContent = (r_unknown || 0);
-    const ea = $('ec-all');     if (ea) ea.textContent = done;
+    const ev = $('ec-valid');    if (ev) ev.textContent = valid;
+    const ei = $('ec-invalid');  if (ei) ei.textContent = invalid;
+    const ec = $('ec-catchall'); if (ec) ec.textContent = (r_catchAll || 0);
+    const eu = $('ec-unknown');  if (eu) eu.textContent = (r_unknown || 0);
+    const ea = $('ec-all');      if (ea) ea.textContent = done;
     // render the latest N results into the table
     const recent = lastResults.slice(-200);
     const rows = recent.map(r => {
-        const cls = r.status === 'valid' ? 'valid' : (r.status === 'unknown' ? 'unknown' : 'invalid');
+        const cls = (r.status === 'safe' || r.status === 'valid') ? 'valid' : (r.status === 'catch_all' ? 'catchall' : (r.status === 'unknown' ? 'unknown' : 'invalid'));
         return `<tr class="${cls}"><td>${esc(r.email)}</td><td><span class="pill ${cls}">${r.status}</span></td><td>${esc(r.reason || r.provider || '')}</td></tr>`;
     }).join('');
     $('results-table').innerHTML = `<table><thead><tr><th>Email</th><th>Status</th><th>Detail</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -370,7 +372,8 @@ $('export-btn').addEventListener('click', async () => {
     if (exportCategory === 'all') results = lastResults;
     else if (exportCategory === 'invalid') results = lastResults.filter(r => r.status === 'invalid');
     else if (exportCategory === 'unknown') results = lastResults.filter(r => r.status === 'unknown');
-    else results = lastResults.filter(r => r.status === 'valid');
+    else if (exportCategory === 'catch_all') results = lastResults.filter(r => r.status === 'catch_all');
+    else results = lastResults.filter(r => r.status === 'safe' || r.status === 'valid');
     if (!results.length) return;
 
     // PREFERRED: if we have the original file structure, export it + status column
@@ -381,17 +384,32 @@ $('export-btn').addEventListener('click', async () => {
         return;
     }
 
-    // Fallback: rich CSV with verification columns
-    const headers = ['Email','Status','Safe_To_Send','Category','Provider','Reason','Domain','Is_Disposable','Is_Role_Based','Is_Catch_All'];
-    const rows = results.map(r => [
-        r.email || '', r.status || 'unknown',
-        r.status === 'valid' ? 'true' : 'false',
-        r.category || '', r.provider || '', r.reason || '',
-        (r.email||'').split('@')[1] || '',
-        r.flags?.disposable ? 'true' : 'false',
-        r.flags?.roleBased ? 'true' : 'false',
-        r.flags?.catchAll ? 'true' : 'false'
-    ]);
+    // Fallback: rich CSV with Reon-compatible verification columns
+    const headers = ['email','username','domain','status','overall_score','is_safe_to_send','is_valid_syntax','is_disposable','is_role_account','mx_accepts_mail','mx_records','can_connect_smtp','has_inbox_full','is_catch_all','is_deliverable','is_disabled','is_spamtrap','is_free_email','is_forwarded'];
+    const rows = results.map(r => {
+        const username = (r.email||'').split('@')[0] || '';
+        const domain = (r.email||'').split('@')[1] || '';
+        const isSafe = (r.status === 'safe' || r.status === 'valid') ? 'true' : 'false';
+        const isDeliverable = (r.status === 'safe' || r.status === 'valid' || r.status === 'catch_all') ? 'true' : 'false';
+        return [
+            r.email || '', username, domain,
+            r.status || 'unknown',
+            r.overall_score !== undefined ? String(r.overall_score) : '',
+            isSafe, 'true',
+            r.flags?.disposable ? 'true' : 'false',
+            r.flags?.roleBased ? 'true' : 'false',
+            'true',
+            r.mx_records || '',
+            'true',
+            r.reason === 'mailbox_full' ? 'true' : 'false',
+            r.flags?.catchAll ? 'true' : 'false',
+            isDeliverable,
+            r.reason === 'mailbox_disabled' ? 'true' : 'false',
+            'false',
+            r.flags?.freeEmail ? 'true' : 'false',
+            'false'
+        ];
+    });
     const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
     const r = await window.ts.saveExport(`truesendy_${exportCategory}.csv`, csv);
     if (!r.canceled) $('file-info').innerHTML = '<span style="color:var(--green)">✓ Saved ' + results.length + ' ' + exportCategory + ' emails to ' + shortPath(r.filePath) + '</span>';

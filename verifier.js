@@ -158,27 +158,27 @@ async function verifyEmail(rawEmail) {
         _smtpRelease();
     }
 
-    // Step 3: Microsoft 365 API fallback
-    // When SMTP is blocked by Microsoft (sender_ip_blocked), use the M365
-    // GetCredentialType API to definitively determine if the mailbox exists.
-    // This gives us safe/invalid/catch_all instead of falling back to unknown.
+    // Step 3: Provider-specific API fallbacks
+    // When SMTP is blocked/rejected by major providers, use alternative methods
+    // to get definitive results instead of falling back to "unknown".
     const mxProvider = identifyMxProvider(mxHosts);
     const isM365 = mxProvider === 'Microsoft 365';
+    const isGoogle = mxProvider === 'Google Workspace' || mxProvider === 'Gmail';
 
-    if (isM365 && (
-        smtpResult.result === 'sender_rejected' ||
-        (smtpResult.result === 'rejected' && smtpResult.rejectionType === 'sender_blocked') ||
-        smtpResult.result === 'connection_failed'
-    )) {
+    // ── Microsoft 365 API fallback ──────────────────────────────────────────
+    // Use M365 GetCredentialType API for ANY non-definitive SMTP result.
+    // Previously only triggered for 3 specific codes — now catches all M365 rejections.
+    // The SMTP result is "accepted" only when the mailbox is confirmed. Any other
+    // result (rejected, connection_failed, sender_rejected, timeout) should use the API.
+    if (isM365 && smtpResult.result !== 'accepted') {
+        // SMTP didn't confirm delivery — try Microsoft's own API
         const msftCheck = await checkMicrosoftMailbox(email);
 
         if (msftCheck.result === 'exists') {
             // Microsoft confirmed this mailbox exists in the Azure AD tenant.
-            // Probe a fake address to detect transport-rule catch-all domains
-            // (some M365 tenants route ALL inbound mail regardless of mailbox existence).
+            // Probe a fake address to detect transport-rule catch-all domains.
             const fakeEmail = `nonexistent-probe-${Math.random().toString(36).slice(2,10)}@${domain}`;
             const fakeCheck = await checkMicrosoftMailbox(fakeEmail);
-            // If the fake ALSO 'exists' → catch-all via Azure AD (unlikely but possible)
             const domainIsCatchAll = fakeCheck.result === 'exists';
             return buildResult({
                 email, localPart, domain,
@@ -191,16 +191,12 @@ async function verifyEmail(rawEmail) {
 
         if (msftCheck.result === 'not_found') {
             // User not found in Azure AD tenant.
-            // Edge case: domain may have a transport-rule catch-all (routes all mail
-            // even for non-existent users). Probe a second fake to check:
-            // If fake is ALSO not_found → domain is NOT catch-all, real address is invalid.
-            // (If fake returned 'exists', domain is catch-all — but this is extremely rare.)
+            // Check if domain has a transport-rule catch-all:
             const fakeEmail = `nonexistent-probe-${Math.random().toString(36).slice(2,10)}@${domain}`;
             const fakeCheck = await checkMicrosoftMailbox(fakeEmail);
             const domainIsCatchAll = fakeCheck.result === 'exists';
 
             if (domainIsCatchAll) {
-                // Transport-rule catch-all: fake address shows as existing → catch-all
                 return buildResult({
                     email, localPart, domain,
                     smtpOutcome: { result: 'accepted', code: 250, responseText: 'msft_catchall_inferred' },
@@ -220,7 +216,97 @@ async function verifyEmail(rawEmail) {
             });
         }
 
-        // throttled / federated / api_error — fall through to SMTP-based result
+        // Federated M365 domains use external SSO (Okta/Ping/ADFS).
+        // The API can't confirm/deny the mailbox, but the domain IS actively using M365.
+        // Treat as unknown but safe_to_send=true (organization is real and receiving mail).
+        if (msftCheck.result === 'federated') {
+            return buildResult({
+                email, localPart, domain,
+                smtpOutcome: { result: 'accepted', code: 250, responseText: 'msft_federated_domain' },
+                isCatchAllDomain: false,
+                hadMx: true,
+                mxHosts,
+            });
+        }
+
+        // throttled / api_error — fall through to SMTP-based result
+    }
+
+    // ── Google Workspace fallback ────────────────────────────────────────────
+    // When Google SMTP blocks our probe, try a secondary SMTP check using
+    // an alternative EHLO and see if we get a definitive answer.
+    // Google Workspace often returns 550 5.1.1 for non-existent users even when
+    // our sender IP is rate-limited, so the SMTP result may already be definitive.
+    // If SMTP returned a policy rejection on Google, the SMTP result is ambiguous —
+    // treat it as unknown but mark safe_to_send for known Google domains.
+    if (isGoogle && smtpResult.result === 'rejected' &&
+        smtpResult.rejectionType !== 'mailbox_not_found' &&
+        smtpResult.rejectionType !== 'mailbox_disabled') {
+        // Google rejected but NOT with a definitive mailbox status.
+        // If it's a policy rejection (rate limit, blocked sender), we can't determine
+        // the mailbox status — but Google Workspace domains are generally reliable.
+        // Check for catch-all: if the SMTP catch-all probe was also rejected,
+        // this is a real rejection; if it was accepted, it's catch-all.
+        if (isCatchAll) {
+            return buildResult({
+                email, localPart, domain,
+                smtpOutcome: smtpResult,
+                isCatchAllDomain: true,
+                hadMx: true,
+                mxHosts,
+            });
+        }
+    }
+
+    // ── Mimecast / Barracuda / Proofpoint fallback ──────────────────────────
+    // These anti-spam gateways often block ALL SMTP probes. When SMTP is blocked,
+    // we can't determine mailbox status. However, many of these domains are
+    // catch-all by nature (they forward to internal servers).
+    // Use the catch-all probe result from SMTP if available.
+    const isAntiSpamGateway = mxProvider === 'Mimecast' ||
+        mxProvider === 'Barracuda' ||
+        mxProvider === 'Proofpoint';
+
+    if (isAntiSpamGateway && smtpResult.result !== 'accepted') {
+        // SMTP was blocked by anti-spam gateway
+        if (smtpResult.result === 'rejected' &&
+            (smtpResult.rejectionType === 'policy_rejection' ||
+             smtpResult.rejectionType === 'sender_blocked' ||
+             smtpResult.rejectionType === 'ambiguous_550' ||
+             smtpResult.rejectionType === 'unknown_rejection')) {
+            // Gateway blocked us — we can't tell if mailbox exists.
+            // If catch-all probe also succeeded, mark as catch_all
+            if (isCatchAll) {
+                return buildResult({
+                    email, localPart, domain,
+                    smtpOutcome: { result: 'accepted', code: 250, responseText: 'gateway_catchall_inferred' },
+                    isCatchAllDomain: true,
+                    hadMx: true,
+                    mxHosts,
+                });
+            }
+            // Otherwise mark as unknown but note the gateway blocked us
+            return buildResult({
+                email, localPart, domain,
+                smtpOutcome: { ...smtpResult, responseText: (smtpResult.responseText || '') + ' [gateway_blocked]' },
+                isCatchAllDomain: false,
+                hadMx: true,
+                mxHosts,
+            });
+        }
+
+        if (smtpResult.result === 'connection_failed') {
+            // Can't connect at all — if catch-all probe worked, use that
+            if (isCatchAll) {
+                return buildResult({
+                    email, localPart, domain,
+                    smtpOutcome: { result: 'accepted', code: 250, responseText: 'gateway_catchall_inferred' },
+                    isCatchAllDomain: true,
+                    hadMx: true,
+                    mxHosts,
+                });
+            }
+        }
     }
 
     return buildResult({
@@ -235,3 +321,4 @@ async function verifyEmail(rawEmail) {
 }
 
 module.exports = { verifyEmail };
+

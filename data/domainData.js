@@ -67,7 +67,6 @@ const FREE_PROVIDERS = {
   '163.com': 'NetEase',
   '126.com': 'NetEase',
   'foxmail.com': 'Tencent',
-  'icloud.com': 'Apple',
   'tutanota.com': 'Tutanota',
   'tuta.io': 'Tutanota',
   'fastmail.com': 'FastMail',
