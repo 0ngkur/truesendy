@@ -8,7 +8,7 @@ const crypto      = require('crypto');
 const bcrypt      = require('bcryptjs');
 const compression = require('compression');
 const verifier    = require('./verifier');
-const xlsx        = require('xlsx');
+const ExcelJS     = require('exceljs');
 const pdfParse    = require('pdf-parse');
 const mammoth     = require('mammoth');
 const store       = require('./db/store');
@@ -806,24 +806,34 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
     try {
         let rawText = '';
         if (ext === '.xlsx' || ext === '.xls') {
-            const workbook = xlsx.readFile(req.file.path);
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            // Try structured parse to preserve columns
-            const rows = xlsx.utils.sheet_to_json(firstSheet, { defval: '' });
-            if (rows.length && typeof rows[0] === 'object') {
-                originalColumns = Object.keys(rows[0]);
-                for (const row of rows) {
-                    const emailVal = Object.values(row).find(v => emailRegex.test(String(v)));
-                    if (emailVal) {
-                        const lc = String(emailVal).toLowerCase().trim();
-                        emails.add(lc);
-                        originalData[lc] = row;
-                    }
+            // Use ExcelJS (secure alternative to xlsx)
+            const wb = new ExcelJS.Workbook();
+            await wb.xlsx.readFile(req.file.path);
+            const firstWS = wb.worksheets[0];
+            if (firstWS) {
+                // Get headers from row 1 (ExcelJS row.values is 1-indexed, index 0 is undefined)
+                const headerRow = (firstWS.getRow(1).values || []).slice(1).map(h => String(h || ''));
+                if (headerRow.length) {
+                    originalColumns = headerRow;
+                    firstWS.eachRow((row, rowNum) => {
+                        if (rowNum === 1) return; // skip header
+                        const obj = {};
+                        headerRow.forEach((h, i) => { obj[h] = String(row.getCell(i + 1).text || ''); });
+                        const emailVal = Object.values(obj).find(v => emailRegex.test(String(v)));
+                        if (emailVal) {
+                            const lc = String(emailVal).toLowerCase().trim();
+                            emails.add(lc);
+                            originalData[lc] = obj;
+                        }
+                    });
                 }
             }
-            // Fallback: also scan all sheets as raw text (catches emails outside tables)
-            workbook.SheetNames.forEach(sheetName => {
-                rawText += xlsx.utils.sheet_to_csv(workbook.Sheets[sheetName]) + ' ';
+            // Fallback: scan all sheets as raw text (catches emails outside tables)
+            wb.worksheets.forEach(ws => {
+                ws.eachRow(row => {
+                    row.eachCell(cell => { rawText += String(cell.text || '') + ','; });
+                    rawText += ' ';
+                });
             });
             const found = rawText.match(emailRegex);
             if (found) found.forEach(e => emails.add(e.toLowerCase().trim()));
@@ -1090,7 +1100,7 @@ async function processJob(jobId) {
 
 // ======================== DOWNLOAD ========================
 
-app.get('/api/download/:jobId', authMiddleware, (req, res) => {
+app.get('/api/download/:jobId', authMiddleware, async (req, res) => {
     const job = activeJobs[req.params.jobId];
     if (!job) return res.status(404).json({ error: 'Job not found' });
     if (job.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
@@ -1284,10 +1294,12 @@ app.get('/api/download/:jobId', authMiddleware, (req, res) => {
         : 'Invalid Emails';
 
     if (format === 'excel') {
-        const ws = xlsx.utils.aoa_to_sheet([headers, ...rows]);
-        const wb = xlsx.utils.book_new();
-        xlsx.utils.book_append_sheet(wb, ws, sheetName);
-        const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        // Use ExcelJS (secure, no known vulnerabilities)
+        const wb2 = new ExcelJS.Workbook();
+        const ws2 = wb2.addWorksheet(sheetName);
+        ws2.addRow(headers);
+        rows.forEach(r => ws2.addRow(r));
+        const buf = await wb2.xlsx.writeBuffer();
         const fname = `truesendy_${category}_${req.params.jobId}.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);

@@ -14,9 +14,9 @@ try { electronMod = require('electron'); dbg(`electron required (app=${typeof el
 catch (e) { dbg('REQUIRE electron FAILED: ' + e.message); throw e; }
 const { app, BrowserWindow, ipcMain, dialog, shell } = electronMod;
 
-let xlsx;
-try { xlsx = require('xlsx'); dbg('xlsx required OK'); }
-catch (e) { dbg('REQUIRE xlsx FAILED: ' + e.message); throw e; }
+let ExcelJS;
+try { ExcelJS = require('exceljs'); dbg('exceljs required OK'); }
+catch (e) { dbg('REQUIRE exceljs FAILED: ' + e.message); throw e; }
 
 let win;
 function createWindow() {
@@ -67,12 +67,18 @@ function parseCsvLine(line) {
     return cells;
 }
 
-function extractEmails(filePath) {
+async function extractEmails(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     let text = '';
     if (ext === '.xlsx' || ext === '.xls') {
-        const wb = xlsx.readFile(filePath);
-        wb.SheetNames.forEach(s => { text += xlsx.utils.sheet_to_csv(wb.Sheets[s]) + ' '; });
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.readFile(filePath);
+        wb.worksheets.forEach(ws => {
+            ws.eachRow(row => {
+                row.eachCell(cell => { text += String(cell.text || '') + ','; });
+                text += ' ';
+            });
+        });
     } else {
         text = fs.readFileSync(filePath, 'utf8');
     }
@@ -88,7 +94,7 @@ function extractEmails(filePath) {
 // Parse a structured file (CSV / XLSX) into columns + row data so we can
 // preserve ALL original info and write the verification status right beside
 // the email column. Returns { columns, lookup } where lookup is { email: {col:val} }.
-function extractStructured(filePath) {
+async function extractStructured(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     let columns = null;
     const lookup = {};
@@ -108,13 +114,20 @@ function extractStructured(filePath) {
                 if (emailVal) lookup[emailVal.toLowerCase().trim()] = row;
             }
         } else if (ext === '.xlsx' || ext === '.xls') {
-            const wb = xlsx.readFile(filePath);
-            const rows = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-            if (rows.length) {
-                columns = Object.keys(rows[0]);
-                for (const row of rows) {
-                    const emailVal = Object.values(row).find(v => FIND_EMAIL_RE.test(String(v)));
-                    if (emailVal) lookup[String(emailVal).toLowerCase().trim()] = row;
+            const wb = new ExcelJS.Workbook();
+            await wb.xlsx.readFile(filePath);
+            const firstWS = wb.worksheets[0];
+            if (firstWS) {
+                const headerRow = (firstWS.getRow(1).values || []).slice(1).map(h => String(h || ''));
+                if (headerRow.length) {
+                    columns = headerRow;
+                    firstWS.eachRow((row, rowNum) => {
+                        if (rowNum === 1) return;
+                        const obj = {};
+                        headerRow.forEach((h, i) => { obj[h] = String(row.getCell(i + 1).text || ''); });
+                        const emailVal = Object.values(obj).find(v => FIND_EMAIL_RE.test(String(v)));
+                        if (emailVal) lookup[String(emailVal).toLowerCase().trim()] = obj;
+                    });
                 }
             }
         }
@@ -131,9 +144,9 @@ ipcMain.handle('pick-email-file', async () => {
     if (r.canceled || !r.filePaths.length) return { canceled: true };
     const filePath = r.filePaths[0];
     try {
-        const emails = extractEmails(filePath);
+        const emails = await extractEmails(filePath);
         if (!emails.length) return { canceled: false, filePath, error: 'No valid email addresses found in this file.' };
-        const structured = extractStructured(filePath);
+        const structured = await extractStructured(filePath);
         return { canceled: false, filePath, count: emails.length, emails,
                  originalColumns: structured.columns, originalData: structured.lookup };
     } catch (e) {
