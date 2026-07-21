@@ -171,8 +171,9 @@ async function isMsftCatchAll(domain) {
 const _smtpCatchAllCache = new Map();
 const SMTP_CATCHALL_CACHE_MAX = 5000;
 
-// Mimecast: SMTP acceptance is unreliable (accepts all, filters internally)
-const SMTP_UNRELIABLE = new Set(['Mimecast']);
+// Accept-all gateways: accept EVERY SMTP recipient then filter internally, so
+// SMTP acceptance can't confirm a specific mailbox → classify as catch_all.
+const SMTP_ACCEPT_ALL = new Set(['Mimecast']);
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -270,20 +271,17 @@ async function verifyEmail(rawEmail) {
         }
     }
 
-    // Mimecast: SMTP acceptance is unreliable
-    if (SMTP_UNRELIABLE.has(mxProvider)) {
+    // Accept-all gateways (Mimecast): accept every SMTP recipient then filter
+    // internally, so acceptance cannot confirm a specific mailbox. Classify as
+    // catch_all — sending never SMTP-bounces, matching Reoon. Previously forced to
+    // "unknown", which manufactured ~53 false unknowns on Mimecast-heavy lists.
+    // Cache the domain so other emails on it short-circuit to catch_all.
+    if (SMTP_ACCEPT_ALL.has(mxProvider)) {
         if (smtpResult && smtpResult.result === 'accepted') {
-            if (isCatchAll) {
-                return buildResult({
-                    email, localPart, domain,
-                    smtpOutcome: smtpResult, isCatchAllDomain: true, hadMx: true, mxHosts,
-                });
-            }
-            // Mimecast accepted but not catch-all → unknown (can't trust it)
+            _smtpCatchAllCache.set(domain, true);
             return buildResult({
                 email, localPart, domain,
-                smtpOutcome: { result: 'connection_failed' },
-                isCatchAllDomain: false, hadMx: true, mxHosts,
+                smtpOutcome: smtpResult, isCatchAllDomain: true, hadMx: true, mxHosts,
             });
         }
     }
