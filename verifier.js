@@ -173,7 +173,8 @@ const SMTP_CATCHALL_CACHE_MAX = 5000;
 
 // Accept-all gateways: accept EVERY SMTP recipient then filter internally, so
 // SMTP acceptance can't confirm a specific mailbox → classify as catch_all.
-const SMTP_ACCEPT_ALL = new Set(['Mimecast']);
+// (Mimecast + Barracuda confirmed accept-all from real per-email data vs Reoon.)
+const SMTP_ACCEPT_ALL = new Set(['Mimecast', 'Barracuda']);
 
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -1023,9 +1023,10 @@ async function processJob(jobId) {
 
     // ── Concurrency: 5 workers.
     // Matches SMTP capacity (5 slots) + M365 API (2 concurrent).
-    // Lower concurrency = fewer simultaneous probes = less rate-limiting
-    // = more accurate results. Speed trade-off is acceptable (~3-4 min for 246 emails).
-    const CONCURRENCY = 5;
+    // 10 workers (was 5). Each email targets a DIFFERENT domain/mail server, so
+    // concurrent probes don't rate-limit each other (the M365 API is separately
+    // capped). Cuts a 246-email run from ~25 min toward the <5 min target.
+    const CONCURRENCY = 10;
     let index = 0;
 
     // ── [FIX #5] Global 30-minute job timeout — kills runaway jobs

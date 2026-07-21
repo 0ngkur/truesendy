@@ -26,19 +26,17 @@ function scriptedProber(realScript, fakeScript, realEmail) {
 // neither, so catch-all domains that greylist probes were missed — the root cause
 // of TrueSendy's catch-all under-detection vs Reoon.
 
-test('fake catch-all probe retries on greylist (temp_fail) and detects catch-all', async () => {
+test('fake catch-all probe does NOT greylist-retry (speed-first) — temp_fail = not catch-all', async () => {
     const email = 'someone@example.com';
-    // Real probe accepted first try; fake probe greylists once then accepts.
+    // Real probe accepted; fake probe greylists. No retry on the fake probe (removed
+    // for speed; accept-all gateways are handled by SMTP_ACCEPT_ALL classification).
     const prober = scriptedProber(
         [{ result: 'accepted', code: 250, responseText: 'ok' }],
-        [
-            { result: 'temp_fail', code: 450, responseText: 'try again later' },
-            { result: 'accepted', code: 250, responseText: 'ok' },
-        ],
+        [{ result: 'temp_fail', code: 450, responseText: 'try again later' }],
         email
     );
     const { isCatchAll } = await checkMailbox(['mx.example.com'], 'example.com', email, { prober, sleep: noSleep });
-    assert.equal(isCatchAll, true);
+    assert.equal(isCatchAll, false);
 });
 
 test('fake catch-all probe falls back to domain sender on sender_rejected', async () => {
