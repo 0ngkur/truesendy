@@ -130,6 +130,28 @@ const MX_PROVIDER_PATTERNS = [
   { pattern: /cortlandpartners\.com$/i,    provider: 'Mimecast' },
   { pattern: /ess\.barracudanetworks\.com$/i, provider: 'Barracuda' },
   { pattern: /spamfilter\.us$/i,           provider: 'Custom/Business' },
+  // ── Additional providers (reduces false unknowns) ──
+  { pattern: /trendmicro\.com$/i,          provider: 'TrendMicro' },
+  { pattern: /trendmicro\.eu$/i,           provider: 'TrendMicro' },
+  { pattern: /websitewelcome\.com$/i,      provider: 'HostGator' },
+  { pattern: /hostgator\.com$/i,           provider: 'HostGator' },
+  { pattern: /kundenserver\.de$/i,         provider: 'IONOS' },
+  { pattern: /pair\.com$/i,                provider: 'Pair Networks' },
+  { pattern: /dreamhost\.com$/i,           provider: 'DreamHost' },
+  { pattern: /hover\.com$/i,               provider: 'Hover' },
+  { pattern: /migadu\.com$/i,              provider: 'Migadu' },
+  { pattern: /cloudflare\.net$/i,          provider: 'Cloudflare' },
+  { pattern: /improvmx\.com$/i,            provider: 'ImprovMX' },
+  { pattern: /mx\.cloudflare\.net$/i,      provider: 'Cloudflare' },
+  { pattern: /forwardemail\.net$/i,        provider: 'ForwardEmail' },
+  { pattern: /bluehost\.com$/i,            provider: 'Bluehost' },
+  { pattern: /siteground\.com$/i,          provider: 'SiteGround' },
+  { pattern: /inmotionhosting\.com$/i,     provider: 'InMotion' },
+  { pattern: /a2hosting\.com$/i,           provider: 'A2Hosting' },
+  { pattern: /netcorecloud\.net$/i,        provider: 'Netcore' },
+  { pattern: /cisco\.com$/i,               provider: 'Cisco ESA' },
+  { pattern: /iphmx\.com$/i,              provider: 'Cisco ESA' },
+  { pattern: /sophos\.com$/i,              provider: 'Sophos' },
 ];
 
 // --- Providers known to aggressively block SMTP probes (RCPT TO) ---
@@ -149,13 +171,21 @@ const ANTI_PROBE_PROVIDERS = new Set([
   'MailSpamProtection',
   'FastMail',         // FastMail blocks external probes
   'MessageLabs',      // Broadcom/Symantec cloud gateway
+  'GoDaddy',          // secureserver.net — blocks RCPT TO probes
+  'Namecheap Private', // privateemail.com — blocks RCPT TO probes
+  'TrendMicro',       // Trend Micro security gateway blocks probes
+  'Cisco ESA',        // Cisco IronPort/ESA blocks probes
+  'Sophos',           // Sophos email gateway blocks probes
 ]);
 
 // --- Providers KNOWN to be catch-all (accept every RCPT TO) ---
 // Confirmed from real-world data: these MX infrastructures always accept all addresses.
 // Using domain-level heuristics here avoids needing an SMTP probe at all.
 const KNOWN_CATCHALL_MX_PROVIDERS = new Set([
-  'FastMail',     // in1-smtp.messagingengine.com / in2-smtp.messagingengine.com — always catch-all
+  'FastMail',          // in1-smtp.messagingengine.com — always catch-all
+  'ImprovMX',          // improvmx.com — email forwarding, always accepts all
+  'Cloudflare',        // Cloudflare Email Routing — forwards all mail
+  'ForwardEmail',      // forwardemail.net — forwarding service, accepts all
 ]);
 
 // --- Well-known large legitimate email providers (for scoring) ---

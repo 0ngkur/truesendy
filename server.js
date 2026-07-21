@@ -749,7 +749,7 @@ app.post('/api/verify-bulk', authMiddleware, async (req, res) => {
 
 // Shared job-creation helper — used by both file upload and typed-text upload.
 // Returns { jobId, total } on success, or { error, status } on failure.
-function createVerificationJob(userId, validEmails, filename, originalColumns, originalData) {
+function createVerificationJob(userId, validEmails, filename, originalColumns, originalData, opts = {}) {
     const MAX_EMAILS_PER_UPLOAD = 100000;
     if (validEmails.length > MAX_EMAILS_PER_UPLOAD) {
         return { status: 413, error: `Too many emails (${validEmails.length}). Maximum ${MAX_EMAILS_PER_UPLOAD.toLocaleString()} per upload — split your list.` };
@@ -782,13 +782,21 @@ function createVerificationJob(userId, validEmails, filename, originalColumns, o
         originalColumns: originalColumns || null,
         originalData: originalData || {},
         resultFile: path.join(os.tmpdir(), `truesendy_job_${jobId}.jsonl`),
+        // WS5: make dedup explicit so totals can align with Reoon.
+        verifyDuplicates: !!opts.verifyDuplicates,
+        emailOrder: opts.emailOrder || null,
+        duplicatesRemoved: opts.duplicatesRemoved || 0,
     };
     try { fs.writeFileSync(activeJobs[jobId].resultFile, ''); } catch {}
     processJob(jobId).catch(err => {
         console.error('[TrueSendy] processJob unhandled:', err.message);
         if (activeJobs[jobId]) activeJobs[jobId].status = 'error';
     });
-    return { jobId, total: validEmails.length };
+    return {
+        jobId, total: validEmails.length,
+        duplicatesRemoved: opts.duplicatesRemoved || 0,
+        outputTotal: opts.verifyDuplicates && opts.emailOrder ? opts.emailOrder.length : validEmails.length,
+    };
 }
 
 app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, async (req, res) => {
@@ -802,6 +810,7 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
     // originalColumns = ['Company','Name',...], originalData = { 'email': {Company:'..',...} }
     let originalColumns = null;
     let originalData = {};
+    let orderedEmails = []; // every email occurrence in input order (with dupes)
 
     try {
         let rawText = '';
@@ -891,6 +900,10 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
             const found = rawText.match(emailRegex);
             if (found) found.forEach(e => emails.add(e.toLowerCase().trim()));
         }
+        // Capture every email occurrence in input order (with dupes) so we can
+        // report duplicatesRemoved and optionally emit one result per input row.
+        const orderedMatch = rawText.match(emailRegex);
+        if (orderedMatch) orderedEmails = orderedMatch.map(e => e.toLowerCase().trim());
     } catch (e) {
         console.error('Extraction error:', e);
         try { fs.unlinkSync(req.file.path); } catch (_) {}
@@ -904,9 +917,15 @@ app.post('/api/upload', authMiddleware, upload.single('list'), validateUpload, a
         return res.status(400).json({ error: 'No valid email addresses found in this file.' });
     }
 
-    const job = createVerificationJob(req.user.id, validEmails, req.file.originalname, originalColumns, originalData);
+    const duplicatesRemoved = Math.max(0, orderedEmails.length - emails.size);
+    const verifyDuplicates = req.body && (req.body.verifyDuplicates === 'true' || req.body.verifyDuplicates === true);
+    const job = createVerificationJob(req.user.id, validEmails, req.file.originalname, originalColumns, originalData, {
+        verifyDuplicates,
+        emailOrder: verifyDuplicates ? orderedEmails : null,
+        duplicatesRemoved,
+    });
     if (job.error) return res.status(job.status).json({ error: job.error });
-    res.json({ jobId: job.jobId, total: job.total });
+    res.json({ jobId: job.jobId, total: job.total, duplicatesRemoved: job.duplicatesRemoved, outputTotal: job.outputTotal });
 
 });
 
@@ -923,12 +942,19 @@ app.post('/api/upload-text', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: 'No valid email addresses found in your text.' });
     }
     const emails = new Set();
-    found.forEach(e => emails.add(e.toLowerCase().trim()));
+    const orderedEmails = found.map(e => e.toLowerCase().trim());
+    orderedEmails.forEach(e => emails.add(e));
     const validEmails = Array.from(emails);
+    const duplicatesRemoved = Math.max(0, orderedEmails.length - emails.size);
+    const verifyDuplicates = req.body && (req.body.verifyDuplicates === 'true' || req.body.verifyDuplicates === true);
 
-    const job = createVerificationJob(req.user.id, validEmails, 'Typed emails', null, {});
+    const job = createVerificationJob(req.user.id, validEmails, 'Typed emails', null, {}, {
+        verifyDuplicates,
+        emailOrder: verifyDuplicates ? orderedEmails : null,
+        duplicatesRemoved,
+    });
     if (job.error) return res.status(job.status).json({ error: job.error });
-    res.json({ jobId: job.jobId, total: job.total });
+    res.json({ jobId: job.jobId, total: job.total, duplicatesRemoved: job.duplicatesRemoved, outputTotal: job.outputTotal });
 });
 
 // ── Disk-backed result storage ───────────────────────────────────────────────
@@ -977,6 +1003,8 @@ app.get('/api/progress/:jobId', authMiddleware, (req, res) => {
         invalid: job.invalid,
         unknown: job.unknown || 0,
         catchAll: job.catchAll || 0,
+        duplicatesRemoved: job.duplicatesRemoved || 0,
+        outputTotal: job.verifyDuplicates && job.emailOrder ? job.emailOrder.length : job.emails.length,
         status: job.status,
         recentValid: job.recentValid,
         recentInvalid: job.recentInvalid,
@@ -1112,7 +1140,16 @@ app.get('/api/download/:jobId', authMiddleware, async (req, res) => {
     const category = req.query.category || 'valid'; // valid | invalid | all
 
     // Read results from disk (handles 100k+ without memory blowup)
-    const allResults = readJobResults(job);
+    let allResults = readJobResults(job);
+
+    // WS5: when the user opted to keep duplicates, expand results back to one
+    // row per input email (in original input order) so the download row count
+    // matches the original file / Reoon. Processing still ran once per UNIQUE
+    // email (fair credits, no re-probing); duplicates reuse the cached verdict.
+    if (job.verifyDuplicates && job.emailOrder && job.emailOrder.length) {
+        const byEmail = new Map(allResults.map(r => [r.email, r]));
+        allResults = job.emailOrder.map(e => byEmail.get(e)).filter(Boolean);
+    }
 
     // Filter results by category (valid / invalid / unknown / all / catch_all)
     // New status system: safe | valid (role) | catch_all | invalid | unknown

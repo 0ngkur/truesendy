@@ -4,7 +4,8 @@
   "description": "TrueSendy — Email Verification for Cold Email Agencies",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
