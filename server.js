@@ -9,7 +9,10 @@ const bcrypt      = require('bcryptjs');
 const compression = require('compression');
 const verifier    = require('./verifier');
 const ExcelJS     = require('exceljs');
-const pdfParse    = require('pdf-parse');
+// pdf-parse is a PDF-only feature; load it lazily so a broken build (e.g. v2.x
+// referencing browser-only DOMMatrix/Path2D) can never crash server startup.
+let _pdfParse;
+const pdfParse = (buf) => { if (!_pdfParse) _pdfParse = require('pdf-parse'); return _pdfParse(buf); };
 const mammoth     = require('mammoth');
 const store       = require('./db/store');
 const settings    = require('./db/settings');
