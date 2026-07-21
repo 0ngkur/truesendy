@@ -2,14 +2,17 @@
 'use strict';
 
 /**
- * tools/analyze-results.js — bucket a TrueSendy result CSV by status × MX provider.
+ * tools/analyze-results.js — bucket TrueSendy results by status × MX provider.
  *
- *   node tools/analyze-results.js <truesendy_download.csv>
+ *   node tools/analyze-results.js <truesendy_download.csv>      # downloaded CSV
+ *   node tools/analyze-results.js /tmp/truesendy_job_<id>.jsonl # raw job file (VPS)
  *
- * Reveals which mail providers dominate the "unknown" bucket (the SMTP ceiling:
- * Google / federated-M365 / Proofpoint / Barracuda) vs Microsoft 365 (which has
- * an API and is recoverable). The "unknown" breakdown at the bottom is the bit
- * that decides whether the gap is fixable (M365 API) or a hard ceiling.
+ * Auto-detects CSV vs JSONL. The JSONL job file (written by appendResult) already
+ * carries a `mxProvider` field per row, so no MX parsing is needed there.
+ *
+ * The "unknown" breakdown at the bottom is the ceiling diagnostic:
+ *   Microsoft 365 dominating  -> recoverable via the M365 API path
+ *   Google/Proofpoint/Barracuda -> hard SMTP ceiling (Reoon uses a mailbox DB)
  */
 const fs = require('fs');
 const csv = require('csv-parser');
@@ -19,8 +22,7 @@ const STATUSES = ['safe', 'valid', 'catch_all', 'invalid', 'unknown'];
 
 function readCsv(file) {
     return new Promise((resolve, reject) => {
-        const rows = [];
-        let headers = [];
+        const rows = []; let headers = [];
         fs.createReadStream(file).pipe(csv())
             .on('headers', h => { headers = h; })
             .on('data', r => rows.push(r))
@@ -29,27 +31,47 @@ function readCsv(file) {
     });
 }
 
+function readJsonl(file) {
+    const text = fs.readFileSync(file, 'utf8');
+    const rows = text.split('\n').filter(Boolean).map(l => {
+        try { return JSON.parse(l); } catch { return null; }
+    }).filter(Boolean);
+    return { rows, headers: rows[0] ? Object.keys(rows[0]) : [], isJsonl: true };
+}
+
 async function main() {
     const file = process.argv[2];
     if (!file) {
-        console.error('Usage: node tools/analyze-results.js <truesendy.csv>');
+        console.error('Usage: node tools/analyze-results.js <truesendy.csv | job.jsonl>');
         process.exit(1);
     }
-    const { rows, headers } = await readCsv(file);
-    const statusCol = headers.find(h => /status/i.test(h)) || 'status';
-    const mxCol = headers.find(h => /mx_?records/i.test(h)) ||
-                  headers.find(h => /^mx$/i.test(h)) || null;
+
+    // Detect format from the first non-empty line.
+    const peek = fs.readFileSync(file, 'utf8').trim().split('\n')[0] || '';
+    const isJsonl = peek.startsWith('{');
+    const { rows, headers } = isJsonl ? readJsonl(file) : await readCsv(file);
+
+    const statusCol = headers.find(h => /^status$/i.test(h)) || headers.find(h => /status/i.test(h)) || 'status';
+    const mxProviderCol = headers.find(h => /^mxprovider$/i.test(h));
+    const mxCol = headers.find(h => /mx_?records/i.test(h)) || headers.find(h => /^mx$/i.test(h));
 
     const bucket = {};
     let total = 0;
     for (const row of rows) {
-        let status = (row[statusCol] || 'unknown').toString().toLowerCase().trim();
+        let status = String(row[statusCol] || 'unknown').toLowerCase().trim();
         if (!STATUSES.includes(status)) status = 'unknown';
-        let provider = '(no mx)';
-        if (mxCol && row[mxCol]) {
+
+        let provider;
+        if (isJsonl && mxProviderCol) {
+            // JSONL job rows carry mxProvider directly.
+            provider = row[mxProviderCol] || '(none)';
+        } else if (mxCol && row[mxCol]) {
             const hosts = String(row[mxCol]).split(/[;\n,]/).map(s => s.trim()).filter(Boolean);
-            if (hosts.length) provider = identifyMxProvider(hosts) || '(unrecognized)';
+            provider = (hosts.length && identifyMxProvider(hosts)) || '(unrecognized)';
+        } else {
+            provider = '(unknown)';
         }
+
         if (!bucket[provider]) {
             bucket[provider] = { safe: 0, valid: 0, catch_all: 0, invalid: 0, unknown: 0, _total: 0 };
         }
@@ -61,7 +83,7 @@ async function main() {
     const providers = Object.keys(bucket).sort((a, b) => bucket[b]._total - bucket[a]._total);
     const cols = ['safe', 'valid', 'catch_all', 'invalid', 'unknown', 'total'];
 
-    console.log(`=== ${total} results across ${providers.length} providers ===`);
+    console.log(`=== ${total} results across ${providers.length} providers (${isJsonl ? 'JSONL' : 'CSV'}) ===`);
     console.log("(rows = MX provider, columns = status)\n");
     console.log(['provider'.padEnd(24), ...cols.map(c => c.padEnd(11))].join(''));
     for (const p of providers) {
