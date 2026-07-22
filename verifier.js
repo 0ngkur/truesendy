@@ -42,7 +42,7 @@ function _smtpRelease() {
 // M365 API: 5 concurrent, no artificial delays. HTTP round-trip (~300ms)
 // provides natural spacing. 5 concurrent = ~15 req/sec max burst.
 // If throttled, ONE fast retry after 1.5s. No long backoff chains.
-const MSFT_MAX_CONCURRENT = 5;
+const MSFT_MAX_CONCURRENT = 3;
 let _msftActive = 0;
 const _msftQueue = [];
 function _msftAcquire() {
@@ -127,18 +127,21 @@ async function _msftApiCall(email) {
 }
 
 /**
- * Check M365 mailbox: 1 call + 1 fast retry on throttle. Max ~2s overhead.
+ * Check M365 mailbox: 1 call + 3 retries with exponential backoff.
+ * Delays: 3s, 8s, 15s. Total max wait ~26s for throttled emails.
  */
 async function checkMicrosoftMailbox(email) {
     const r1 = await _msftApiCall(email);
     if (r1.result === 'exists' || r1.result === 'not_found' || r1.result === 'federated') return r1;
 
-    // ONE fast retry on throttle/error — 1.5s delay only
-    if (r1.result === 'throttled' || r1.result === 'api_error') {
-        await new Promise(r => setTimeout(r, 1500));
-        const r2 = await _msftApiCall(email);
-        if (r2.result === 'exists' || r2.result === 'not_found' || r2.result === 'federated') return r2;
-        return r2;
+    // 3 retries with exponential backoff on throttle/error
+    const retryDelays = [3000, 8000, 15000];
+    for (let i = 0; i < retryDelays.length; i++) {
+        if (r1.result !== 'throttled' && r1.result !== 'api_error') break;
+        await new Promise(r => setTimeout(r, retryDelays[i]));
+        const retry = await _msftApiCall(email);
+        if (retry.result === 'exists' || retry.result === 'not_found' || retry.result === 'federated') return retry;
+        if (i === retryDelays.length - 1) return retry;
     }
 
     return r1;
@@ -148,22 +151,33 @@ async function checkMicrosoftMailbox(email) {
 const _catchAllCache = new Map();
 
 /**
- * M365 catch-all detection — API only (no SMTP). Fast and cached.
- * One API call for a fake address. If exists → catch-all domain.
+ * M365 catch-all detection — API with 2 retries.
+ * Probes a fake address. If exists → catch-all domain.
  */
 async function isMsftCatchAll(domain) {
     if (_catchAllCache.has(domain)) return _catchAllCache.get(domain);
 
-    const fake = `nonexist-probe-${Math.random().toString(36).slice(2, 10)}@${domain}`;
-    const check = await _msftApiCall(fake); // Single call, no retry
-    const result = check.result === 'exists';
-    _catchAllCache.set(domain, result);
+    let result = false;
+    let resolved = false;
 
-    // Evict old entries
-    if (_catchAllCache.size > 5000) {
-        _catchAllCache.delete(_catchAllCache.keys().next().value);
+    // Try up to 3 times to get a definitive answer
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const fake = `nonexist-probe-${Math.random().toString(36).slice(2, 10)}@${domain}`;
+        const check = await _msftApiCall(fake);
+        if (check.result === 'exists') { result = true; resolved = true; break; }
+        if (check.result === 'not_found') { result = false; resolved = true; break; }
+        // throttled/error — wait and retry
+        if (attempt < 2) await new Promise(r => setTimeout(r, 3000 + attempt * 5000));
     }
-    return result;
+
+    // Only cache if we got a definitive answer
+    if (resolved) {
+        _catchAllCache.set(domain, result);
+        if (_catchAllCache.size > 5000) {
+            _catchAllCache.delete(_catchAllCache.keys().next().value);
+        }
+    }
+    return resolved ? result : null; // null = couldn't determine
 }
 
 // Per-domain SMTP catch-all cache (mirror of the M365 API cache above).
@@ -243,19 +257,24 @@ async function verifyEmail(rawEmail) {
 
         if (api.result === 'not_found') {
             const catchAll = await isMsftCatchAll(domain);
-            if (catchAll) {
+            if (catchAll === true) {
                 return buildResult({
                     email, localPart, domain,
                     smtpOutcome: { result: 'accepted', code: 250, responseText: 'msft_catchall' },
                     isCatchAllDomain: true, hadMx: true, mxHosts,
                 });
             }
-            // API definitively says user doesn't exist → invalid
-            return buildResult({
-                email, localPart, domain,
-                smtpOutcome: { result: 'rejected', code: 550, responseText: 'msft_api_not_found', rejectionType: 'mailbox_not_found' },
-                isCatchAllDomain: false, hadMx: true, mxHosts,
-            });
+            if (catchAll === null) {
+                // Catch-all check failed (throttled) — fall through to SMTP
+                // instead of marking invalid (fixes nationals.com false invalids)
+            } else {
+                // API definitively says user doesn't exist → invalid
+                return buildResult({
+                    email, localPart, domain,
+                    smtpOutcome: { result: 'rejected', code: 550, responseText: 'msft_api_not_found', rejectionType: 'mailbox_not_found' },
+                    isCatchAllDomain: false, hadMx: true, mxHosts,
+                });
+            }
         }
 
         // Federated → fall through to SMTP (API can't check federated mailboxes)
