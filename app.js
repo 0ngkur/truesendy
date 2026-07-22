@@ -482,13 +482,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 singleEmailResult.textContent = data.error;
                 singleEmailResult.className = 'text-danger';
             } else {
-                const color = data.status === 'valid' ? 'text-success' : (data.status === 'unknown' ? 'text-warning' : 'text-danger');
-                const icon = data.status === 'valid' ? '\u2705' : (data.status === 'unknown' ? '\u2753' : '\u274C');
+                const color = (data.status === 'safe' || data.status === 'valid') ? 'text-success' : (data.status === 'catch_all' ? 'text-warning' : (data.status === 'unknown' ? 'text-muted' : 'text-danger'));
+                const icon = (data.status === 'safe' || data.status === 'valid') ? '\u2705' : (data.status === 'catch_all' ? '\u26A0\uFE0F' : (data.status === 'unknown' ? '\u2753' : '\u274C'));
                 const flags = [];
                 if (data.flags.roleBased) flags.push('Role');
                 if (data.flags.catchAll) flags.push('Catch-all');
                 if (data.flags.disposable) flags.push('Disposable');
+                if (data.flags.spamtrap) flags.push('Spamtrap');
+                if (data.flags.freeEmail) flags.push('Free Email');
                 const flagsText = flags.length > 0 ? flags.join(', ') : 'None';
+
+                const score = data.overallScore !== undefined ? data.overallScore : 0;
+                const scoreColor = score >= 75 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : 'var(--danger)';
 
                 const card = document.createElement('div');
                 card.className = 'result-card';
@@ -496,6 +501,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     '<div class="result-header">' +
                         '<span class="result-icon">' + icon + '</span>' +
                         '<span class="' + color + ' result-status">' + escapeHtml(data.status.toUpperCase()) + '</span>' +
+                        '<span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:1.5rem;font-weight:800;color:' + scoreColor + '">' + score + '</span>' +
+                    '</div>' +
+                    '<div style="width:100%;height:6px;background:var(--bg-subtle);border-radius:3px;margin-bottom:1rem;overflow:hidden">' +
+                        '<div style="height:100%;width:' + score + '%;background:' + scoreColor + ';border-radius:3px;transition:width 0.5s"></div>' +
                     '</div>' +
                     '<div class="result-grid">' +
                         '<div class="result-item"><span class="result-label">Provider</span><span class="result-value"></span></div>' +
@@ -504,9 +513,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         '<div class="result-item"><span class="result-label">Flags</span><span class="result-value"></span></div>' +
                     '</div>';
                 const values = card.querySelectorAll('.result-value');
-                values[0].textContent = data.mxProvider || data.providerType;
+                values[0].textContent = data.mxProvider || data.providerType || 'N/A';
                 values[1].textContent = data.emailCategory || 'N/A';
-                values[2].textContent = data.reasonCode.replace(/_/g, ' ');
+                values[2].textContent = (data.reasonCode || '').replace(/_/g, ' ');
                 values[3].textContent = flagsText;
 
                 singleEmailResult.replaceChildren(card);

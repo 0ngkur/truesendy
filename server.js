@@ -1304,7 +1304,7 @@ app.get('/api/download/:jobId', authMiddleware, async (req, res) => {
                 r.flags?.catchAll ? 'true' : 'false',
                 isDeliverable,
                 isDisabled,
-                'false',
+                r.flags?.spamtrap ? 'true' : 'false',
                 freeEmail,
                 'false',
             ]
@@ -1325,7 +1325,7 @@ app.get('/api/download/:jobId', authMiddleware, async (req, res) => {
                 r.flags?.catchAll ? 'true' : 'false',
                 isDeliverable,
                 isDisabled,
-                'false',
+                r.flags?.spamtrap ? 'true' : 'false',
                 freeEmail,
                 'false',
             ];
@@ -1404,12 +1404,18 @@ app.post('/api/v1/verify', apiLimiter, apiKeyAuth, async (req, res) => {
         res.json({
             email:           result.email,
             status:          result.status,
+            sub_status:      result.reasonCode,
             safe_to_send:    result.safeToSend !== undefined ? result.safeToSend : (result.status === 'safe' || result.status === 'valid'),
             overall_score:   result.overallScore !== undefined ? result.overallScore : undefined,
             reason:          result.reasonCode,
             provider:        result.mxProvider || result.providerType,
             category:        result.emailCategory || 'Professional',
             mx_records:      result.mxRecords || '',
+            is_disposable:   result.flags?.disposable || false,
+            is_spamtrap:     result.flags?.spamtrap || false,
+            is_role_based:   result.flags?.roleBased || false,
+            is_catch_all:    result.flags?.catchAll || false,
+            is_free_email:   result.flags?.freeEmail || false,
             flags:           result.flags || {},
             tokensRemaining: store.getUserCredits(req.apiRecord.userId),
         });
@@ -1463,15 +1469,21 @@ app.post('/api/v1/verify-bulk', apiLimiter, apiKeyAuth, async (req, res) => {
                     const r = await verifier.verifyEmail(email);
                     if (r.domain) historyDB.recordResult(email, r.domain, r.status, r.overallScore, r.reasonCode);
                     return {
-                        email:         r.email,
-                        status:        r.status,
-                        safe_to_send:  r.safeToSend !== undefined ? r.safeToSend : (r.status === 'safe' || r.status === 'valid'),
-                        overall_score: r.overallScore,
-                        reason:        r.reasonCode,
-                        provider:      r.mxProvider || r.providerType,
-                        category:      r.emailCategory || 'Professional',
-                        mx_records:    r.mxRecords || '',
-                        flags:         r.flags || {},
+                        email:           r.email,
+                        status:          r.status,
+                        sub_status:      r.reasonCode,
+                        safe_to_send:    r.safeToSend !== undefined ? r.safeToSend : (r.status === 'safe' || r.status === 'valid'),
+                        overall_score:   r.overallScore,
+                        reason:          r.reasonCode,
+                        provider:        r.mxProvider || r.providerType,
+                        category:        r.emailCategory || 'Professional',
+                        mx_records:      r.mxRecords || '',
+                        is_disposable:   r.flags?.disposable || false,
+                        is_spamtrap:     r.flags?.spamtrap || false,
+                        is_role_based:   r.flags?.roleBased || false,
+                        is_catch_all:    r.flags?.catchAll || false,
+                        is_free_email:   r.flags?.freeEmail || false,
+                        flags:           r.flags || {},
                     };
                 } catch {
                     return { email, status: 'error', safe_to_send: false, reason: 'verification_failed' };
