@@ -238,18 +238,30 @@ const DISPOSABLE_DOMAINS = new Set([
   'mailhostbox.com',
 ]);
 
-// --- Role-based local parts ---
+// --- Role-based local parts (expanded Phase 4) ---
 const ROLE_LOCAL_PARTS = new Set([
   'admin', 'administrator', 'support', 'info', 'contact', 'sales',
   'help', 'billing', 'noreply', 'no-reply', 'postmaster', 'webmaster',
   'hostmaster', 'abuse', 'marketing', 'office', 'hr', 'careers',
   'team', 'feedback', 'press', 'media', 'security', 'compliance',
   'legal', 'ops', 'operations', 'devops', 'engineering',
-  'hello', 'enquiries', 'enquiry', 'accounts', 'accounts', 'invoice',
-  'invoices', 'payments', 'billing', 'orders', 'order', 'shop',
+  'hello', 'enquiries', 'enquiry', 'accounts', 'invoice',
+  'invoices', 'payments', 'orders', 'order', 'shop',
   'newsletter', 'news', 'updates', 'notifications', 'alerts',
   'service', 'services', 'manager', 'management', 'director',
   'connect', 'welcome', 'reply', 'replies', 'bounce', 'bounces',
+  'jobs', 'job', 'recruiting', 'recruitment', 'talent',
+  'spam', 'nobody', 'mailer-daemon', 'mail-daemon',
+  'complaints', 'privacy', 'unsubscribe', 'subscribe',
+  'demo', 'test', 'example', 'sample', 'placeholder',
+  'it', 'ict', 'tech', 'system', 'systems',
+  'ceo', 'cto', 'cfo', 'coo', 'cio',
+  'finance', 'financial', 'accounting', 'audit',
+  'customer', 'customers', 'client', 'clients',
+  'general', 'info', 'mail', 'email', 'inbox',
+  'root', 'sysadmin', 'network', 'admin1', 'user', 'users',
+  'donotreply', 'do-not-reply', 'no_reply',
+  'auto-reply', 'auto', 'automated',
 ]);
 
 function classifyProvider(domain) {
