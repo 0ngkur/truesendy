@@ -4,6 +4,7 @@ const { checkMailbox } = require('./lib/smtpProbe');
 const { buildResult } = require('./lib/classify');
 const { identifyMxProvider } = require('./data/domainData');
 const greylist = require('./lib/greylistQueue');
+const historyDB = require('./lib/historyDB');
 
 // Use node-fetch (works on Node 14+)
 let _fetch;
@@ -195,6 +196,23 @@ async function verifyEmail(rawEmail) {
     }
 
     const { email, localPart, domain } = syntax;
+
+    // Phase 2: Historical cache — if we verified this email < 7 days ago, return cached result
+    const cached = historyDB.getEmailHistory(email);
+    if (cached && (Date.now() - cached.timestamp < 7 * 24 * 60 * 60 * 1000)) {
+        // Return cached result with cached flag
+        const result = buildResult({
+            email, localPart, domain,
+            smtpOutcome: { result: 'accepted', code: 250, responseText: 'historical_cache' },
+            isCatchAllDomain: false, hadMx: true, mxHosts: [],
+        });
+        // Override with cached status if it was invalid (don't re-probe known invalids)
+        if (cached.status === 'invalid') {
+            return { ...result, status: 'invalid', reasonCode: cached.reasonCode, safeToSend: false, overallScore: cached.score };
+        }
+        // For valid/cached results, return quickly
+        return { ...result, status: cached.status, reasonCode: 'historical_cache', overallScore: cached.score };
+    }
 
     // Step 1: DNS — fast, cached by OS resolver
     const mxHosts = await resolveMailServers(domain);

@@ -9,6 +9,7 @@ const bcrypt      = require('bcryptjs');
 const compression = require('compression');
 const verifier    = require('./verifier');
 const disposableChecker = require('./data/disposableChecker');
+const historyDB   = require('./lib/historyDB');
 const ExcelJS     = require('exceljs');
 // pdf-parse is a PDF-only feature; load it lazily so a broken build (e.g. v2.x
 // referencing browser-only DOMMatrix/Path2D) can never crash server startup.
@@ -676,6 +677,7 @@ app.post('/api/verify-single', authMiddleware, async (req, res) => {
 
     try {
         const data = await verifier.verifyEmail(email);
+        if (data.domain) historyDB.recordResult(email, data.domain, data.status, data.overallScore, data.reasonCode);
         res.json(data);
     } catch (e) {
         store.refundToken(req.user.id, 1); // Refund on error
@@ -1052,6 +1054,7 @@ async function processJob(jobId) {
             const email = job.emails[i];
             try {
                 const data = await verifier.verifyEmail(email);
+                if (data.domain) historyDB.recordResult(email, data.domain, data.status, data.overallScore, data.reasonCode);
                 // Write to disk (handles 100k+ without memory blowup) + keep a
                 // small rolling buffer for the live feed.
                 appendResult(job, data);
@@ -1396,6 +1399,7 @@ app.post('/api/v1/verify', apiLimiter, apiKeyAuth, async (req, res) => {
 
     try {
         const result = await verifier.verifyEmail(email);
+        if (result.domain) historyDB.recordResult(email, result.domain, result.status, result.overallScore, result.reasonCode);
         store.stampApiUse(req.apiRecord.userId);
         res.json({
             email:           result.email,
@@ -1457,6 +1461,7 @@ app.post('/api/v1/verify-bulk', apiLimiter, apiKeyAuth, async (req, res) => {
             batch.map(async email => {
                 try {
                     const r = await verifier.verifyEmail(email);
+                    if (r.domain) historyDB.recordResult(email, r.domain, r.status, r.overallScore, r.reasonCode);
                     return {
                         email:         r.email,
                         status:        r.status,
@@ -1964,6 +1969,8 @@ const server = app.listen(PORT, () => {
     console.log(`[TrueSendy] Live at http://localhost:${PORT}`);
     console.log(`[TrueSendy] Disposable domains loaded: ${disposableChecker.getDisposableCount().toLocaleString()}`);
     console.log(`[TrueSendy] Spamtrap domains loaded: ${disposableChecker.getSpamtrapCount().toLocaleString()}`);
+    const hStats = historyDB.getStats();
+    console.log(`[TrueSendy] History entries: ${hStats.historyEntries.toLocaleString()} | Tracked domains: ${hStats.trackedDomains.toLocaleString()}`);
     if (typeof verifier.startGreylistWorker === 'function') {
         verifier.startGreylistWorker();
     }
