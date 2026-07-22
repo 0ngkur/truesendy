@@ -3,6 +3,7 @@ const { resolveMailServers } = require('./lib/dnsLookup');
 const { checkMailbox } = require('./lib/smtpProbe');
 const { buildResult } = require('./lib/classify');
 const { identifyMxProvider } = require('./data/domainData');
+const greylist = require('./lib/greylistQueue');
 
 // Use node-fetch (works on Node 14+)
 let _fetch;
@@ -186,9 +187,10 @@ async function verifyEmail(rawEmail) {
     if (!syntax.valid) {
         return {
             email: rawEmail, domain: null, providerType: null,
-            mxProvider: null, emailCategory: null,
+            mxProvider: null, mxRecords: '', emailCategory: null,
             status: 'invalid', reasonCode: syntax.reason,
-            flags: { disposable: false, roleBased: false, catchAll: false },
+            safeToSend: false, overallScore: 0,
+            flags: { disposable: false, spamtrap: false, roleBased: false, catchAll: false, freeEmail: false },
         };
     }
 
@@ -293,4 +295,12 @@ async function verifyEmail(rawEmail) {
     });
 }
 
-module.exports = { verifyEmail };
+// Start greylist worker — retries temp_fail emails in the background
+function startGreylistWorker() {
+    greylist.startWorker(async (email) => {
+        return verifyEmail(email);
+    }, 60000);
+    console.log('[TrueSendy] Greylist retry worker started');
+}
+
+module.exports = { verifyEmail, startGreylistWorker };

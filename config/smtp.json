@@ -1,0 +1,18 @@
+{
+    "heloDomain": "verify.truesendy.com",
+    "mailFrom": "verify@truesendy.com",
+    "mailFromNull": "<>",
+    "timeoutMs": 7000,
+    "catchAllTimeoutMs": 5000,
+    "catchAllProbes": 3,
+    "greylistRetryDelays": [300, 900, 1800],
+    "maxGreylistRetries": 3,
+    "proxy": {
+        "enabled": false,
+        "type": "socks5",
+        "host": "",
+        "port": 1080,
+        "username": "",
+        "password": ""
+    }
+}

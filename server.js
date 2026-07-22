@@ -8,6 +8,7 @@ const crypto      = require('crypto');
 const bcrypt      = require('bcryptjs');
 const compression = require('compression');
 const verifier    = require('./verifier');
+const disposableChecker = require('./data/disposableChecker');
 const ExcelJS     = require('exceljs');
 // pdf-parse is a PDF-only feature; load it lazily so a broken build (e.g. v2.x
 // referencing browser-only DOMMatrix/Path2D) can never crash server startup.
@@ -1961,6 +1962,11 @@ app.use(safeErrorHandler);
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
     console.log(`[TrueSendy] Live at http://localhost:${PORT}`);
+    console.log(`[TrueSendy] Disposable domains loaded: ${disposableChecker.getDisposableCount().toLocaleString()}`);
+    console.log(`[TrueSendy] Spamtrap domains loaded: ${disposableChecker.getSpamtrapCount().toLocaleString()}`);
+    if (typeof verifier.startGreylistWorker === 'function') {
+        verifier.startGreylistWorker();
+    }
 });
 
 // Graceful shutdown (Render / systemd / pm2 send SIGTERM/SIGINT on restart/deploy).

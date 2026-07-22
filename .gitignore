@@ -42,3 +42,6 @@ test*.js
 test*.csv
 test*.txt
 vps-*.png
+
+db/greylist.json
+start.bat

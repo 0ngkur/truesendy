@@ -296,8 +296,14 @@ function isKnownBigProvider(domain) {
   return KNOWN_BIG_PROVIDER_DOMAINS.has((domain || '').toLowerCase());
 }
 
+const disposableChecker = require('./disposableChecker');
+
 function isDisposable(domain) {
-  return DISPOSABLE_DOMAINS.has(domain.toLowerCase());
+  return disposableChecker.isDisposable(domain);
+}
+
+function isSpamtrap(domain) {
+  return disposableChecker.isSpamtrap(domain);
 }
 
 function isRoleAccount(localPart) {
@@ -311,6 +317,7 @@ module.exports = {
   isKnownCatchAllProvider,
   isKnownBigProvider,
   isDisposable,
+  isSpamtrap,
   isRoleAccount,
   FREE_PROVIDERS,
   MX_PROVIDER_PATTERNS,
