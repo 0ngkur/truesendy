@@ -2,7 +2,7 @@ const { checkSyntax } = require('./lib/syntaxCheck');
 const { resolveMailServers } = require('./lib/dnsLookup');
 const { checkMailbox } = require('./lib/smtpProbe');
 const { buildResult } = require('./lib/classify');
-const { identifyMxProvider } = require('./data/domainData');
+const { identifyMxProvider, isAntiProbeProvider } = require('./data/domainData');
 const greylist = require('./lib/greylistQueue');
 const historyDB = require('./lib/historyDB');
 
@@ -25,7 +25,7 @@ try {
 // SMTP: 15 concurrent connections. High enough for speed, each probe is
 // independent (different target servers). Enterprise gateways don't correlate
 // connections from the same IP to different domains.
-const SMTP_MAX_CONCURRENCY = 15;
+const SMTP_MAX_CONCURRENCY = 25;
 let _smtpActive = 0;
 const _smtpQueue = [];
 function _smtpAcquire() {
@@ -263,6 +263,26 @@ async function verifyEmail(rawEmail) {
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // GMAIL / GOOGLE WORKSPACE / YAHOO / AOL — SMTP probes ALWAYS fail from
+    // datacenter IPs. These providers are catch-all (accept all syntactically
+    // valid addresses). Skip SMTP entirely — saves 8s per email and matches
+    // Reoon's approach for these providers.
+    // ──────────────────────────────────────────────────────────────────────
+    const SKIP_SMTP_PROVIDERS = new Set(['Google Workspace', 'Yahoo']);
+    const SKIP_SMTP_DOMAINS = new Set([
+        'gmail.com', 'googlemail.com',
+        'yahoo.com', 'yahoo.co.uk', 'ymail.com', 'rocketmail.com',
+        'aol.com', 'aim.com',
+    ]);
+    if (SKIP_SMTP_PROVIDERS.has(mxProvider) || SKIP_SMTP_DOMAINS.has(domain.toLowerCase())) {
+        return buildResult({
+            email, localPart, domain,
+            smtpOutcome: { result: 'connection_failed', reason: 'provider_blocks_smtp' },
+            isCatchAllDomain: true, hadMx: true, mxHosts,
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // SMTP PATH: for non-M365, federated M365, or M365 API failure
     // ──────────────────────────────────────────────────────────────────────
     // Per-domain catch-all cache: short-circuit known catch-all domains, and skip
@@ -278,8 +298,14 @@ async function verifyEmail(rawEmail) {
 
     await _smtpAcquire();
     let smtpResult, isCatchAll;
+    // Anti-probe providers (Proofpoint, Mimecast, Cisco, etc.) — use 3s timeout
+    // instead of 8s. These connections fail fast anyway, saves 5s per failed probe.
+    const smtpOpts = { skipCatchAll };
+    if (isAntiProbeProvider(mxProvider)) {
+        smtpOpts.shortTimeout = true;
+    }
     try {
-        ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email, { skipCatchAll }));
+        ({ smtpResult, isCatchAll } = await checkMailbox(mxHosts, domain, email, smtpOpts));
     } finally {
         _smtpRelease();
     }
